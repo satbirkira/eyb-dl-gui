@@ -13,43 +13,43 @@ import subprocess
 import time
 from time import gmtime, strftime
 
-class state:
+class State:
     NO_OPEN_FILE = 0
     EMPTY_FILE = 1
     OPENING_FILE = 2
     FILE_OPENED = 3
     DOWNLOADING = 4
     UPDATING = 5
-    YTDL_UPDATE_FAIL =6
+    YTDL_UPDATE_FAIL = 6
     YTDL_UPDATE_SUCCESS =7
 
-class quality:
+class Format:
     FLV = 0
     MP4 = 1
     MP3 = 2
     WAV = 3
+    toString = {0: "Flv",
+                1: "Mp4",
+                2: "Mp3",
+                3: "Wav"}
 
-class format:
+class Quality:
     NORMAL = 0
     HIGH = 1
+    toString = {0: "Normal",
+                1: "High"}
 
 class videoState:
     QUEUED = 0
     SKIPPED = 1
     CANCELLED = 2
     CONVERTING = 3
-
-    def getEnglish(state):
-        if(state == videoState.QUEUED):
-            return "Queued"
-        elif(state == videoState.SKIPPED):
-            return "Skip"
-        elif(state == videoState.CANCELLED):
-            return "Cancelled"
-        elif(state == videoState.CONVERTING):
-            return "Converting"
-        else:
-            return "Unkown State"
+    DOWNLOADING = 4
+    toString = {0: "Queued",
+                1: "Skip",
+                2: "Cancelled",
+                3: "Converting",
+                4: "Downloading"}
 
 
 class View(Frame):
@@ -169,9 +169,9 @@ class View(Frame):
         
         #add current video status labels        
         Label(statusFrame, text="Video ID:").grid(row=0, column=1, sticky=W)
-        Label(statusFrame, text="Video Name:").grid(row=1, column=1, sticky=W)
+        Label(statusFrame, text="Percent Done:").grid(row=1, column=1, sticky=W)
         Label(statusFrame, text="Current Status:").grid(row=2, column=1, sticky=W)
-        Label(statusFrame, text="Speed [mb/s]:").grid(row=3, column=1, sticky=W)
+        Label(statusFrame, text="Speed [kb/s]:").grid(row=3, column=1, sticky=W)
         Label(statusFrame, text="Time Remaining:").grid(row=4, column=1, sticky=W)
 
         #add current video statuses
@@ -239,7 +239,7 @@ class View(Frame):
                                   values=(id,
                                           video["Title"],
                                           video["Url"],
-                                          videoState.getEnglish(video["Info"]["Status"])
+                                          videoState.toString[video["Info"]["Status"]]
                                           )
                                   )
             id += 1
@@ -319,29 +319,26 @@ Originally developed as an interactive terminal program. Dedicated to Kathan Des
 #Program Class
 class Model():
 
+    #bookmark info
     filepath = ""
-    outputPath = ""
     videos=[]
+    program_status = State.NO_OPEN_FILE
+
+    #mvc views
     views =[]
-    program_status = state.NO_OPEN_FILE
 
     #default HQ FLV
-    outputFormat = 0
-    outputQuality = 1
+    outputFormat = Format.FLV
+    outputQuality = Quality.NORMAL
 
     #video downloading info
     current_video = 0
-
-    #put this in the array of videos
-    youtube_title = ""
-    current_status = None
-    current_speed = 0
-    time_remaning = 0
+    outputPath = ""
     
 
     def __init__(self):
         self.outputPath = os.getcwd()
-        self.changeStatus(state.NO_OPEN_FILE)
+        self.changeStatus(State.NO_OPEN_FILE)
         
     def addView(self, view):
         self.views.append(view)
@@ -370,10 +367,10 @@ class Model():
             print ("File opened successfully.")
             check_file.close()
         except:
-            changeStatus(state.EMPTY_FILE)
+            changeStatus(State.EMPTY_FILE)
         else:
             #load the bookmark using regex
-            self.changeStatus(state.OPENING_FILE)
+            self.changeStatus(State.OPENING_FILE)
             content_file = codecs.open(self.filepath, 'r', 'utf-8')
             print ("Reading from bookmarks.html ..")
             bookmark_file = content_file.read()
@@ -401,6 +398,8 @@ class Model():
                                   "Title": formated_title,
                                   "Info": {
                                             "Status": videoState.QUEUED,
+                                            "Percent": 0,
+                                            "Size": 0,
                                             "Speed": 0,
                                             "remainingTime": 0}
                                   }
@@ -410,9 +409,9 @@ class Model():
             #store fixed video list
             self.videos = newlist
             if self.numberOfVideos() == 0:
-                self.changeStatus(state.EMPTY_FILE)
+                self.changeStatus(State.EMPTY_FILE)
             else:
-                self.changeStatus(state.FILE_OPENED)
+                self.changeStatus(State.FILE_OPENED)
             print ("here")
         self.updateAllViews()
         print ("here")
@@ -420,7 +419,7 @@ class Model():
     def updateYTDL(self):
         print(os.getcwd()+"\youtube-dl.exe --update")
         old_status = self.getStatus()
-        self.changeStatus(state.UPDATING)
+        self.changeStatus(State.UPDATING)
         self.updateAllViews()
         update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update", stderr=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
         err = update_youtube_dl.communicate()
@@ -431,9 +430,9 @@ class Model():
             print ("Standard error of youtube-dl:")
             print (err[1])
             print ("Using current version of youtube-dl ..")
-            self.changeStatus(state.YTDL_UPDATE_SUCCESS)
+            self.changeStatus(State.YTDL_UPDATE_SUCCESS)
         else:
-            self.changeStatus(state.YTDL_UPDATE_FAIL)
+            self.changeStatus(State.YTDL_UPDATE_FAIL)
         self.updateAllViews()
         self.changeStatus(old_status)
         
