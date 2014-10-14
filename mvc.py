@@ -36,9 +36,20 @@ class format:
 class videoState:
     QUEUED = 0
     SKIPPED = 1
-    CANCELED = 2
+    CANCELLED = 2
     CONVERTING = 3
-    
+
+    def getEnglish(state):
+        if(state == videoState.QUEUED):
+            return "Queued"
+        elif(state == videoState.SKIPPED):
+            return "Skip"
+        elif(state == videoState.CANCELLED):
+            return "Cancelled"
+        elif(state == videoState.CONVERTING):
+            return "Converting"
+        else:
+            return "Unkown State"
 
 
 class View(Frame):
@@ -222,7 +233,15 @@ class View(Frame):
             self.videoTree.delete(item)
         id = 0
         for video in self.model.videos:
-            self.videoTree.insert('', 'end', text='', values=(id, video[1], video[0], video[2]))
+            self.videoTree.insert('',
+                                  'end',
+                                  text='',
+                                  values=(id,
+                                          video["Title"],
+                                          video["Url"],
+                                          videoState.getEnglish(video["Info"]["Status"])
+                                          )
+                                  )
             id += 1
 
     def update(self):
@@ -302,7 +321,7 @@ class Model():
 
     filepath = ""
     outputPath = ""
-    videos=[]	
+    videos=[]
     views =[]
     program_status = state.NO_OPEN_FILE
 
@@ -354,7 +373,7 @@ class Model():
             changeStatus(state.EMPTY_FILE)
         else:
             #load the bookmark using regex
-            changeStatus(state.OPENING_FILE)
+            self.changeStatus(state.OPENING_FILE)
             content_file = codecs.open(self.filepath, 'r', 'utf-8')
             print ("Reading from bookmarks.html ..")
             bookmark_file = content_file.read()
@@ -378,16 +397,22 @@ class Model():
                 formated_title = video[1].replace(":", " ")
                 if(len(formated_title) > 255):
                         formated_title = formated_title[0:254]
-                formated_video = ["www.youtube.com/watch?v=" + video[0], formated_title, "Queued"]
-                if formated_video[0] not in newlist_urls:
-                        newlist_urls.append(formated_video[0])
+                formated_video = {"Url": "www.youtube.com/watch?v=" + video[0],
+                                  "Title": formated_title,
+                                  "Info": {
+                                            "Status": videoState.QUEUED,
+                                            "Speed": 0,
+                                            "remainingTime": 0}
+                                  }
+                if formated_video["Url"] not in newlist_urls:
+                        newlist_urls.append(formated_video["Url"])
                         newlist.append(formated_video)
             #store fixed video list
             self.videos = newlist
             if self.numberOfVideos() == 0:
-                changeStatus(state.EMPTY_FILE)
+                self.changeStatus(state.EMPTY_FILE)
             else:
-                changeStatus(state.FILE_OPENED)
+                self.changeStatus(state.FILE_OPENED)
             print ("here")
         self.updateAllViews()
         print ("here")
@@ -423,14 +448,14 @@ class Model():
         self.updateAllViews()
 
     def videoStatus(self, i):
-        return self.videos[i][2]
+        return self.videos[i]["Info"]["Status"]
 
     def changeVideoStatus(self, i, status):
-        self.videos[i][2] = status
+        self.videos[i]["Info"]["Status"] = status
 
     def currentVideoStatus(self):
         i = self.current_video
-        return self.videos[i][2]
+        return self.videos[i]["Info"]["Status"]
 
     def cancelVideo(self):
         return None
@@ -440,18 +465,18 @@ class Model():
 
     def removeItemFromList(self, i):
         i = int(i)
-        if self.videoStatus(i) == "Queued":
-            self.changeVideoStatus(i, "Skip")
+        if self.videoStatus(i) == videoState.QUEUED:
+            self.changeVideoStatus(i, videoState.SKIPPED)
             self.updateAllViews() #for some reason, this must be repeated at every condition
         elif re.search("Downloading", self.videoStatus(i)) or re.search("Converting", self.videoStatus(i)):
             self.cancelVideo()
-            self.changeVideoStatus(i, "Cancelled")
+            self.changeVideoStatus(i, videoState.CANCELLED)
             self.updateAllViews()
         
     def queueItemFromList(self, i):
         i = int(i)
-        if self.videoStatus(i) == "Skip":
-            self.changeVideoStatus(i, "Queued")
+        if self.videoStatus(i) == videoState.SKIPPED:
+            self.changeVideoStatus(i, videoState.QUEUED)
         self.updateAllViews()
 
 
