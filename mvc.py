@@ -148,7 +148,7 @@ class View(Frame):
         fileNameBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
 
         #fill in comboboxes using weird hack because formatBox["values"] is a weird list
-        # and won't do listOfFormats = Format.toString.values()
+        # and won't do listOfFormats = Format.toString.values() (bad string casting)
         listOfFormats = []
         for formatStr in Format.toString.values():
             listOfFormats.append(formatStr)
@@ -229,22 +229,18 @@ class View(Frame):
         if(self.videoTree.selection() != ""):
             item = self.videoTree.selection()[0]
             print(self.videoTree.item(item,"values"))
+            menu = Menu(root, tearoff=0)
+            menu.add_command(label="Open Video", command= lambda : webbrowser.open_new_tab(self.videoTree.item(item,"values")[2]))
             if (self.videoTree.item(item,"values")[3] == "Queued"):
-                print(self.videoTree.item(item,"values")[3])
-                menu = Menu(root, tearoff=0)
-                menu.add_command(label="Open Video", command= lambda : webbrowser.open_new_tab(self.videoTree.item(item,"values")[2]))
                 menu.add_command(label="Skip Selected", command= lambda : self.model.removeItemFromList(self.videoTree.item(item,"values")[0]))
-                menu.post(event.x_root, event.y_root)
             elif (self.videoTree.item(item,"values")[3] == "Skip"):
-                print(self.videoTree.item(item,"values")[3])
-                menu = Menu(root, tearoff=0)
-                menu.add_command(label="Open Video", command= lambda : webbrowser.open_new_tab(self.videoTree.item(item,"values")[2]))
                 menu.add_command(label="Queue Selected", command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
-                menu.post(event.x_root, event.y_root)
             elif (self.videoTree.item(item,"values")[3] == "Converting"):
-                print("Converting")
-            elif (re.search(self.videoTree.item(item,"values")[3], "Downloading")):
-                print("Downloading")
+                menu.add_command(label="Cancel Selected", command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+            elif (self.videoTree.item(item,"values")[3] == "Downloading"):
+                menu.add_command(label="Cancel Selected", command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+            #no case for cancelled, there is no current easy way to requeue a cancelled download.
+            menu.post(event.x_root, event.y_root)
 		
     def openFile(self):
         filepath = filedialog.askopenfilename()
@@ -520,7 +516,7 @@ class Model():
         if self.videoStatus(i) == videoState.QUEUED:
             self.changeVideoStatus(i, videoState.SKIPPED)
             self.updateAllViews() #for some reason, this must be repeated at every condition
-        elif re.search("Downloading", self.videoStatus(i)) or re.search("Converting", self.videoStatus(i)):
+        elif self.videoStatus(i)== videoState.DOWNLOADING or self.videoStatus(i) == videoState.CONVERTING:
             self.cancelVideo()
             self.changeVideoStatus(i, videoState.CANCELLED)
             self.updateAllViews()
