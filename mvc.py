@@ -39,6 +39,12 @@ class Quality:
     toString = {0: "Normal",
                 1: "High"}
 
+class titleFormat:
+    USE_BOOKMARK_TITLE = 0
+    USE_YOUTUBE_TITLE = 1
+    toString = {0: "Use Bookmark Title",
+                1: "Use Youtube Title"}
+
 class videoState:
     QUEUED = 0
     SKIPPED = 1
@@ -140,21 +146,37 @@ class View(Frame):
         formatBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
         qualityBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
         fileNameBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
-        formatBox['values']=('Flv', 'Mp4', 'Mp3', 'Wav')
-        qualityBox['values']=('Normal', 'High')
-        fileNameBox['values']=('Use Bookmark Title', 'Use Youtube Title')
+
+        #fill in comboboxes using weird hack because formatBox["values"] is a weird list
+        # and won't do listOfFormats = Format.toString.values()
+        listOfFormats = []
+        for formatStr in Format.toString.values():
+            listOfFormats.append(formatStr)
+        formatBox["values"] = listOfFormats
+        
+        listOfQualities = []
+        for qualityStr in Quality.toString.values():
+            listOfQualities.append(qualityStr)
+        qualityBox["values"] = listOfQualities
+
+        listOfTitleFormats = []
+        for titleFormatStr in titleFormat.toString.values():
+            listOfTitleFormats.append(titleFormatStr)
+        fileNameBox['values']= listOfTitleFormats
+        
+        #add listeners for when an option is selected
         formatBox.bind("<<ComboboxSelected>>", self.say_clicked())
         qualityBox.bind("<<ComboboxSelected>>", self.say_clicked())
         fileNameBox.bind("<<ComboboxSelected>>", self.say_clicked())
 
-        #default HQ Flv
-        formatBox.current(0)
-        qualityBox.current(0)
-        fileNameBox.current(0)
+        #setup what is selected in the combobox
+        formatBox.current(self.model.getOutputFormat())
+        qualityBox.current(self.model.getOutputQuality())
+        fileNameBox.current(self.model.getOutputTitleFormat())
 
         #create output folder entry
         outputFolder = Entry(optionsChoicesFrame, width=40)
-        outputFolder.insert(0, os.getcwd())
+        outputFolder.insert(0, self.model.getOutputPath())
         outputFolder.xview('moveto', 1)
 
         #create browse button
@@ -323,6 +345,7 @@ class Model():
     filepath = ""
     videos=[]
     program_status = State.NO_OPEN_FILE
+    output_title_format = titleFormat.USE_BOOKMARK_TITLE
 
     #mvc views
     views =[]
@@ -334,11 +357,51 @@ class Model():
     #video downloading info
     current_video = 0
     outputPath = ""
+
+    def getFilePath(self):
+        return self.filepath
+    def setFilePath(self, path):
+        print(path)
+        self.filepath = path
+        
+    def getOutputPath(self):
+        return self.outputPath
+    def setOutputPath(self, path):
+        self.outputPath = path
+
+    def getOutputFormat(self):
+        return self.outputFormat
+    def setOutputFormat(self, outputFormat):
+        self.outputFormat = outputFormat
+
+    def getOutputTitleFormat(self):
+        return self.output_title_format
+    def setOutputTitleFormat(self, titleFormat):
+        self.output_title_format = titleFormat
+
+    def getOutputQuality(self):
+        return self.outputQuality
+    def setOutputQuality(self, quality):
+        self.outputQuality = quality
+
+
+    def getStatus(self):
+        return self.program_status
+    def setStatus(self, status):
+        self.program_status = status
+
+
+    def numberOfVideos(self):
+        return len(self.videos)
+
+    def currentVideoStatus(self):
+        i = self.current_video
+        return self.videos[i]["Info"]["Status"]
     
 
     def __init__(self):
-        self.outputPath = os.getcwd()
-        self.changeStatus(State.NO_OPEN_FILE)
+        self.setOutputPath(os.getcwd())
+        self.setStatus(State.NO_OPEN_FILE)
         
     def addView(self, view):
         self.views.append(view)
@@ -353,25 +416,22 @@ class Model():
     def say_clicked(self):
          print ("clicked!")
 
-    def changeStatus(self, status):
-        self.program_status = status
-
-    def getStatus(self):
-        return self.program_status  
+    
         
 
     def loadBookmark(self, filepath):
-        self.filepath = filepath
+        #get bookmark filepath
+        self.setFilePath(filepath)
         try:
-            check_file = open(self.filepath)
+            check_file = open(self.getFilePath())
             print ("File opened successfully.")
             check_file.close()
         except:
-            changeStatus(State.EMPTY_FILE)
+            self.setStatus(State.EMPTY_FILE)
         else:
             #load the bookmark using regex
-            self.changeStatus(State.OPENING_FILE)
-            content_file = codecs.open(self.filepath, 'r', 'utf-8')
+            self.setStatus(State.OPENING_FILE)
+            content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
             print ("Reading from bookmarks.html ..")
             bookmark_file = content_file.read()
             print ("Applying Regular Expression ..")
@@ -409,9 +469,9 @@ class Model():
             #store fixed video list
             self.videos = newlist
             if self.numberOfVideos() == 0:
-                self.changeStatus(State.EMPTY_FILE)
+                self.setStatus(State.EMPTY_FILE)
             else:
-                self.changeStatus(State.FILE_OPENED)
+                self.setStatus(State.FILE_OPENED)
             print ("here")
         self.updateAllViews()
         print ("here")
@@ -419,7 +479,7 @@ class Model():
     def updateYTDL(self):
         print(os.getcwd()+"\youtube-dl.exe --update")
         old_status = self.getStatus()
-        self.changeStatus(State.UPDATING)
+        self.setStatus(State.UPDATING)
         self.updateAllViews()
         update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update", stderr=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
         err = update_youtube_dl.communicate()
@@ -430,11 +490,11 @@ class Model():
             print ("Standard error of youtube-dl:")
             print (err[1])
             print ("Using current version of youtube-dl ..")
-            self.changeStatus(State.YTDL_UPDATE_SUCCESS)
+            self.setStatus(State.YTDL_UPDATE_SUCCESS)
         else:
-            self.changeStatus(State.YTDL_UPDATE_FAIL)
+            self.setStatus(State.YTDL_UPDATE_FAIL)
         self.updateAllViews()
-        self.changeStatus(old_status)
+        self.setStatus(old_status)
         
 
     def startDownloading(self):
@@ -451,16 +511,9 @@ class Model():
 
     def changeVideoStatus(self, i, status):
         self.videos[i]["Info"]["Status"] = status
-
-    def currentVideoStatus(self):
-        i = self.current_video
-        return self.videos[i]["Info"]["Status"]
-
+        
     def cancelVideo(self):
         return None
-
-    def numberOfVideos(self):
-        return len(self.videos)
 
     def removeItemFromList(self, i):
         i = int(i)
