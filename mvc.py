@@ -97,7 +97,16 @@ class View(Frame):
         self.filemenu.entryconfig(1,state="normal")
     def disableUpdate(self):
         self.filemenu.entryconfig(1,state="disabled")
-    
+    def enableDownload(self):
+        self.buttons["download_button"]['state'] = "normal"
+    def disableDownload(self):
+        self.buttons["download_button"]['state'] = "disabled"
+
+    def disableAllWidgets(self):
+        self.disableOptions()
+        self.disableOpenFile()
+        self.disableUpdate()
+        self.disableDownload()
     
     def __init__(self, master, model):
         #create window frame
@@ -259,13 +268,7 @@ class View(Frame):
         self.comboBoxes["quality"] = qualityBox
         self.comboBoxes["naming"] = fileNameBox
         self.entries["output_path"] = outputFolder
-
-        self.disableOptions()
-        self.enableOptions()		
-        self.disableOpenFile()
-        self.enableOpenFile()
-        self.disableUpdate()
-        self.enableUpdate()	
+	
         
 
     def say_clicked(self):
@@ -319,31 +322,40 @@ class View(Frame):
             id += 1
 
     def update(self):
-        print ("here3")
         print(self.model.program_status)
-        print("Updating View")
+        print("self.updateVideoTable()")
+        #Update video table right away
         self.updateVideoTable()
-        #on error dialogs, attach command to pressing okay to restore old state
-        if self.model.program_status == 1:
+        #Assume nothing can be used. Enable widgets that are relevent
+        self.disableAllWidgets()
+        if self.model.getStatus() == State.NO_OPEN_FILE:		
+            self.enableOpenFile()
+            self.enableUpdate()
+        elif self.model.getStatus() == State.EMPTY_FILE:
             tkinter.messagebox.showerror(
             "Open file",
             "Videos were not read from file.")
-        elif self.model.program_status == 3:
-            print("Files Opened, Updaing Video Table")
-            self.updateVideoTable()
-        elif self.model.program_status == 6:
-            print("Updating")
-        elif self.model.program_status == 7:
+        elif self.model.getStatus() == State.OPENING_FILE:
+            pass
+        elif self.model.getStatus() == State.FILE_OPENED:
+            self.enableOptions()		
+            self.enableOpenFile()
+            self.enableUpdate()
+            self.enableDownload()
+        elif self.model.getStatus() == State.DOWNLOADING:
+            self.enableDownload()
+            #set downloading button text to say pause
+        elif self.model.model.getStatus() == State.UPDATING:
+            pass
+        elif self.model.getStatus() == State.YTDL_UPDATE_FAIL:
             tkinter.messagebox.showerror(
             "Failed To Update",
             "Could not update update youtube-dl.")
-        elif self.model.program_status == 8:
+        elif self.model.getStatus() == State.YTDL_UPDATE_SUCCESS:
             tkinter.messagebox.showinfo(
             "YouTube-DL",
             "The newest version of youtube-dl will now be used.")
-        elif self.model.program_status == 4:
-            #disable download options
-            self.disableOptions()
+        
 		
     def aboutEybDl(self):
         #setup toplevel
@@ -356,9 +368,9 @@ class View(Frame):
         
         #add strings
         about_heading = "Easy Youtube Bookmark Downloader"
-        about_body = """The easiest way to batch archieve videos.
-Originally developed as an interactive terminal program. Dedicated to Kathan Desai and Harsh Oza.
-        """
+        about_body = "The easiest way to batch archieve videos. "
+        about_body += "Originally developed as an interactive terminal program. "
+        about_body += "Dedicated to Kathan Desai and Harsh Oza."
         about_version = "Version 3.0 [24/09/14]"
         author_text = "Author: Satbir Saini (satbir.kira@gmail.com)"
         author_website = "satbirkira.com"
@@ -482,6 +494,7 @@ class Model():
         else:
             #load the bookmark using regex
             self.setStatus(State.OPENING_FILE)
+            self.updateAllViews()
             content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
             print ("Reading from bookmarks.html ..")
             bookmark_file = content_file.read()
