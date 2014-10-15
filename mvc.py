@@ -101,7 +101,12 @@ class View(Frame):
         self.buttons["download_button"]['state'] = "normal"
     def disableDownload(self):
         self.buttons["download_button"]['state'] = "disabled"
-
+    def updateDownloadButtonText(self):
+        if self.model.getStatus() == State.DOWNLOADING:
+            self.buttons["download_button"]['text'] = "Pause Download"
+        else:
+            self.buttons["download_button"]['text'] = "Begin Download"
+    
     def disableAllWidgets(self):
         self.disableOptions()
         self.disableOpenFile()
@@ -248,7 +253,7 @@ class View(Frame):
         Label(statusFrame, text="N/A").grid(row=4, column=2, sticky=W)
 
         #add download button
-        download = Button(downloadButtonFrame, text="Begin Download", command=self.model.startDownloading)
+        download = Button(downloadButtonFrame, text="N/A", command=self.model.startDownloading)
         download.pack(fill=BOTH, expand=YES, anchor=CENTER)
 
         #add all frames to screen
@@ -302,8 +307,9 @@ class View(Frame):
             menu.post(event.x_root, event.y_root)
 		
     def openFile(self):
-        filepath = filedialog.askopenfilename()
-        self.model.loadBookmark(filepath)
+        if self.model.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
+            filepath = filedialog.askopenfilename()
+            self.model.loadBookmark(filepath)
 
     def updateVideoTable(self):
         for item in self.videoTree.get_children():
@@ -324,8 +330,9 @@ class View(Frame):
     def update(self):
         print(self.model.program_status)
         print("self.updateVideoTable()")
-        #Update video table right away
+        #Update video table and download button text right away
         self.updateVideoTable()
+        self.updateDownloadButtonText()
         #Assume nothing can be used. Enable widgets that are relevent
         self.disableAllWidgets()
         #Any states needing a messagebox don't are always reverted to the previous state
@@ -347,7 +354,7 @@ class View(Frame):
         elif self.model.getStatus() == State.DOWNLOADING:
             self.enableDownload()
             #set downloading button text to say pause
-        elif self.model.model.getStatus() == State.UPDATING:
+        elif self.model.getStatus() == State.UPDATING:
             pass
         elif self.model.getStatus() == State.YTDL_UPDATE_FAIL:
             tkinter.messagebox.showerror(
@@ -485,95 +492,106 @@ class Model():
         
 
     def loadBookmark(self, filepath):
-        #get bookmark filepath
-        self.setFilePath(filepath)
-        try:
-            check_file = open(self.getFilePath())
-            print ("File opened successfully.")
-            check_file.close()
-        except:
-            self.setStatus(State.EMPTY_FILE)
-        else:
-            #load the bookmark using regex
-            self.setStatus(State.OPENING_FILE)
-            self.updateAllViews()
-            content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
-            print ("Reading from bookmarks.html ..")
-            bookmark_file = content_file.read()
-            print ("Applying Regular Expression ..")
-            regex = re.compile('.*<DT><A\sHREF=".*www\.youtube\.com/watch\?.*v=([^&#"]*)\S*".*>(.*)</A>\n?')
-            r = regex.search(bookmark_file)
-            videos = regex.findall(bookmark_file)
-            #remove duplicate videos and create proper links
-            newlist = []
-            newlist_urls = []
-            for video in videos:
-                formated_title = video[1].replace("\\", " ")#replace single slash
-                formated_title = video[1].replace("?", " ")
-                formated_title = video[1].replace(".", " ")
-                formated_title = video[1].replace("|", " ")
-                formated_title = video[1].replace("*", " ")
-                formated_title = video[1].replace("<", " ")
-                formated_title = video[1].replace(">", " ")
-                formated_title = video[1].replace("\"", " ")
-                formated_title = video[1].replace("/", " ")
-                formated_title = video[1].replace(":", " ")
-                if(len(formated_title) > 255):
-                        formated_title = formated_title[0:254]
-                formated_video = {"Url": "www.youtube.com/watch?v=" + video[0],
-                                  "Title": formated_title,
-                                  "Info": {
-                                            "Status": videoState.QUEUED,
-                                            "Percent": 0,
-                                            "Size": 0,
-                                            "Speed": 0,
-                                            "remainingTime": 0}
-                                  }
-                if formated_video["Url"] not in newlist_urls:
-                        newlist_urls.append(formated_video["Url"])
-                        newlist.append(formated_video)
-            #store fixed video list
-            self.videos = newlist
-            if self.numberOfVideos() == 0:
+        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
+            #get bookmark filepath
+            self.setFilePath(filepath)
+            old_status = self.getStatus()
+            try:
+                check_file = open(self.getFilePath())
+                print ("File opened successfully.")
+                check_file.close()
+            except:
                 self.setStatus(State.EMPTY_FILE)
+                self.updateAllViews()
+                self.setStatus(old_status)
             else:
-                self.setStatus(State.FILE_OPENED)
+                #load the bookmark using regex
+                self.setStatus(State.OPENING_FILE)
+                self.updateAllViews()
+                content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
+                print ("Reading from bookmarks.html ..")
+                bookmark_file = content_file.read()
+                print ("Applying Regular Expression ..")
+                regex = re.compile('.*<DT><A\sHREF=".*www\.youtube\.com/watch\?.*v=([^&#"]*)\S*".*>(.*)</A>\n?')
+                r = regex.search(bookmark_file)
+                videos = regex.findall(bookmark_file)
+                #remove duplicate videos and create proper links
+                newlist = []
+                newlist_urls = []
+                for video in videos:
+                    formated_title = video[1].replace("\\", " ")#replace single slash
+                    formated_title = video[1].replace("?", " ")
+                    formated_title = video[1].replace(".", " ")
+                    formated_title = video[1].replace("|", " ")
+                    formated_title = video[1].replace("*", " ")
+                    formated_title = video[1].replace("<", " ")
+                    formated_title = video[1].replace(">", " ")
+                    formated_title = video[1].replace("\"", " ")
+                    formated_title = video[1].replace("/", " ")
+                    formated_title = video[1].replace(":", " ")
+                    if(len(formated_title) > 255):
+                            formated_title = formated_title[0:254]
+                    formated_video = {"Url": "www.youtube.com/watch?v=" + video[0],
+                                      "Title": formated_title,
+                                      "Info": {
+                                                "Status": videoState.QUEUED,
+                                                "Percent": 0,
+                                                "Size": 0,
+                                                "Speed": 0,
+                                                "remainingTime": 0}
+                                      }
+                    if formated_video["Url"] not in newlist_urls:
+                            newlist_urls.append(formated_video["Url"])
+                            newlist.append(formated_video)
+                #store fixed video list
+                self.videos = newlist
+                if self.numberOfVideos() == 0:
+                    self.setStatus(State.EMPTY_FILE)
+                    self.updateAllViews()
+                    self.setStatus(old_status)
+                else:
+                    self.setStatus(State.FILE_OPENED)
+                print ("here")
+            self.updateAllViews()
             print ("here")
-        self.updateAllViews()
-        print ("here")
     
     def updateYTDL(self):
-        print(os.getcwd()+"\youtube-dl.exe --update")
-        old_status = self.getStatus()
-        self.setStatus(State.UPDATING)
-        self.updateAllViews()
-        update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update",
-                                             stderr=subprocess.PIPE,
-                                             stdout=subprocess.PIPE,
-                                             universal_newlines=True)
-        err = update_youtube_dl.communicate()
-        out = update_youtube_dl.communicate()[0]
-        errcode = update_youtube_dl.returncode
-        print(out)
-        if err[1].strip() or re.search("ERROR:", out):
-            print ("Standard error of youtube-dl:")
-            print (err[1])
-            print ("Using current version of youtube-dl ..")
-            self.setStatus(State.YTDL_UPDATE_SUCCESS)
-        else:
-            self.setStatus(State.YTDL_UPDATE_FAIL)
-        self.updateAllViews()
-        self.setStatus(old_status)
+        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
+            print(os.getcwd()+"\youtube-dl.exe --update")
+            old_status = self.getStatus()
+            self.setStatus(State.UPDATING)
+            self.updateAllViews()
+            update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update",
+                                                 stderr=subprocess.PIPE,
+                                                 stdout=subprocess.PIPE,
+                                                 universal_newlines=True)
+            err = update_youtube_dl.communicate()
+            out = update_youtube_dl.communicate()[0]
+            errcode = update_youtube_dl.returncode
+            print(out)
+            if len(err[1].strip()) !=0  or re.search("ERROR:", out):
+                print ("Standard error of youtube-dl:")
+                print (err[1])
+                print ("Using current version of youtube-dl ..")
+                self.setStatus(State.YTDL_UPDATE_FAIL)
+                self.updateAllViews()
+            else:
+                self.setStatus(State.YTDL_UPDATE_SUCCESS)
+                self.updateAllViews()
+            self.setStatus(old_status)
+            self.updateAllViews()
         
 
     def startDownloading(self):
-        print (self.filepath)
-        self.updateAllViews()
-    #http://stackoverflow.com/questions/2082850/real-time-subprocess-popen-via-stdout-and-pipe
+        if self.getStatus() == State.FILE_OPENED:
+            print ("DOWNLOADING!")
+            self.setStatus(State.DOWNLOADING)
+            self.updateAllViews()
+        elif self.getStatus() == State.DOWNLOADING:
+            print ("PAUSED!")
+            self.setStatus(State.FILE_OPENED)
+            self.updateAllViews()
 
-    def pauseDownloading(self):
-        print (self.filepath)
-        self.updateAllViews()
 
     def videoStatus(self, i):
         return self.videos[i]["Info"]["Status"]
