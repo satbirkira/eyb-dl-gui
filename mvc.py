@@ -120,7 +120,8 @@ class View(Frame):
 
         #add help menu
         aboutmenu = Menu(menubar, tearoff=0)
-        aboutmenu.add_command(label="About youtube-dl", command=lambda: webbrowser.open_new_tab('http://rg3.github.io/youtube-dl/about.html'))
+        aboutmenu.add_command(label="About youtube-dl",
+                              command=lambda: webbrowser.open_new_tab('http://rg3.github.io/youtube-dl/about.html'))
         aboutmenu.add_separator()
         aboutmenu.add_command(label="About eyb-dl", command=self.aboutEybDl, accelerator="F1")
         menubar.add_cascade(label="About", menu=aboutmenu)
@@ -280,15 +281,20 @@ class View(Frame):
             item = self.videoTree.selection()[0]
             print(self.videoTree.item(item,"values"))
             menu = Menu(root, tearoff=0)
-            menu.add_command(label="Open Video", command= lambda : webbrowser.open_new_tab(self.videoTree.item(item,"values")[2]))
+            menu.add_command(label="Open Video",
+                             command= lambda : webbrowser.open_new_tab(self.videoTree.item(item,"values")[2]))
             if (self.videoTree.item(item,"values")[3] == "Queued"):
-                menu.add_command(label="Skip Selected", command= lambda : self.model.removeItemFromList(self.videoTree.item(item,"values")[0]))
+                menu.add_command(label="Skip Selected",
+                                 command= lambda : self.model.removeItemFromList(self.videoTree.item(item,"values")[0]))
             elif (self.videoTree.item(item,"values")[3] == "Skip"):
-                menu.add_command(label="Queue Selected", command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+                menu.add_command(label="Queue Selected",
+                                 command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
             elif (self.videoTree.item(item,"values")[3] == "Converting"):
-                menu.add_command(label="Cancel Selected", command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+                menu.add_command(label="Cancel Selected",
+                                 command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
             elif (self.videoTree.item(item,"values")[3] == "Downloading"):
-                menu.add_command(label="Cancel Selected", command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+                menu.add_command(label="Cancel Selected",
+                                 command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
             #no case for cancelled, there is no current easy way to requeue a cancelled download.
             menu.post(event.x_root, event.y_root)
 		
@@ -526,7 +532,10 @@ class Model():
         old_status = self.getStatus()
         self.setStatus(State.UPDATING)
         self.updateAllViews()
-        update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update", stderr=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+        update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update",
+                                             stderr=subprocess.PIPE,
+                                             stdout=subprocess.PIPE,
+                                             universal_newlines=True)
         err = update_youtube_dl.communicate()
         out = update_youtube_dl.communicate()[0]
         errcode = update_youtube_dl.returncode
