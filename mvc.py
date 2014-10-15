@@ -73,6 +73,30 @@ class View(Frame):
                   "quality": None,
                   "naming": None}
     entries = {"output_path": None}
+
+    def enableOptions(self):
+        self.buttons["browse_button"]['state'] = "normal"
+        self.comboBoxes["format"]['state'] = "normal"
+        self.comboBoxes["quality"]['state'] = "normal"
+        self.comboBoxes["naming"]['state'] = "normal"
+        self.entries["output_path"]['state'] = "normal"
+    def disableOptions(self):
+        self.buttons["browse_button"]['state'] = "disabled"
+        self.comboBoxes["format"]['state'] = "disabled"
+        self.comboBoxes["quality"]['state'] = "disabled"
+        self.comboBoxes["naming"]['state'] = "disabled"
+        self.entries["output_path"]['state'] = "disabled"
+    # File Menu Index
+    # [0] = Open File
+    # [1] = Update youtube-dl
+    def enableOpenFile(self):
+        self.filemenu.entryconfig(0,state="normal")
+    def disableOpenFile(self):
+        self.filemenu.entryconfig(0,state="disabled")
+    def enableUpdate(self):
+        self.filemenu.entryconfig(1,state="normal")
+    def disableUpdate(self):
+        self.filemenu.entryconfig(1,state="disabled")
     
     
     def __init__(self, master, model):
@@ -235,6 +259,13 @@ class View(Frame):
         self.comboBoxes["naming"] = fileNameBox
         self.entries["output_path"] = outputFolder
 
+        self.disableOptions()
+        self.enableOptions()		
+        self.disableOpenFile()
+        self.enableOpenFile()
+        self.disableUpdate()
+        self.enableUpdate()	
+        
 
     def say_clicked(self):
          print ("clicked!")
@@ -306,8 +337,7 @@ class View(Frame):
             "The newest version of youtube-dl will now be used.")
         elif self.model.program_status == 4:
             #disable download options
-            for child in self.options.winfo_children():
-                child['state']="disabled"
+            self.disableOptions()
 		
     def aboutEybDl(self):
         #setup toplevel
