@@ -76,9 +76,9 @@ class View(Frame):
 
     def enableOptions(self):
         self.buttons["browse_button"]['state'] = "normal"
-        self.comboBoxes["format"]['state'] = "normal"
-        self.comboBoxes["quality"]['state'] = "normal"
-        self.comboBoxes["naming"]['state'] = "normal"
+        self.comboBoxes["format"]['state'] = "readonly"
+        self.comboBoxes["quality"]['state'] = "readonly"
+        self.comboBoxes["naming"]['state'] = "readonly"
         self.entries["output_path"]['state'] = "normal"
     def disableOptions(self):
         self.buttons["browse_button"]['state'] = "disabled"
@@ -328,6 +328,8 @@ class View(Frame):
         self.updateVideoTable()
         #Assume nothing can be used. Enable widgets that are relevent
         self.disableAllWidgets()
+        #Any states needing a messagebox don't are always reverted to the previous state
+        #   by the model. This is so that the view can temporarily see an error occured
         if self.model.getStatus() == State.NO_OPEN_FILE:		
             self.enableOpenFile()
             self.enableUpdate()
