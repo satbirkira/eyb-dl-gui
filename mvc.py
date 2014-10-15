@@ -21,7 +21,7 @@ class State:
     DOWNLOADING = 4
     UPDATING = 5
     YTDL_UPDATE_FAIL = 6
-    YTDL_UPDATE_SUCCESS =7
+    YTDL_UPDATE_SUCCESS = 7
 
 class Format:
     FLV = 0
@@ -60,10 +60,20 @@ class videoState:
 
 class View(Frame):
 
+    #Initialize widgets of interest that will have it's states altered at runtime.
+    #The reason for doing this is because no widget is added dynamically. All are
+    #   created only once during the initialization phase.
     menubar = None
+    filemenu = None
+    aboutmenu = None
     videoTree = None
-    options = None
-    videoStatus = None
+    buttons = {"browse_button": None,
+               "download_button": None}
+    comboBoxes = {"format": None,
+                  "quality": None,
+                  "naming": None}
+    entries = {"output_path": None}
+    
     
     def __init__(self, master, model):
         #create window frame
@@ -74,22 +84,22 @@ class View(Frame):
 	
     def iniWidgets(self):
         #create menu
-        self.menubar = Menu(root)
+        menubar = Menu(root)
         
         #add file menu
-        filemenu = Menu(self.menubar, tearoff=0)
+        filemenu = Menu(menubar, tearoff=0)
         filemenu.add_command(label="Open", command=self.openFile, accelerator="Ctrl+O")
         filemenu.add_command(label="Update youtube-dl", command=self.model.updateYTDL, accelerator="Ctrl+U")
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=root.destroy, accelerator="Alt+F4")
-        self.menubar.add_cascade(label="File", menu=filemenu)
+        menubar.add_cascade(label="File", menu=filemenu)
 
         #add help menu
-        aboutmenu = Menu(self.menubar, tearoff=0)
+        aboutmenu = Menu(menubar, tearoff=0)
         aboutmenu.add_command(label="About youtube-dl", command=lambda: webbrowser.open_new_tab('http://rg3.github.io/youtube-dl/about.html'))
         aboutmenu.add_separator()
         aboutmenu.add_command(label="About eyb-dl", command=self.aboutEybDl, accelerator="F1")
-        self.menubar.add_cascade(label="About", menu=aboutmenu)
+        menubar.add_cascade(label="About", menu=aboutmenu)
 
         #display menu
         root.bind('<Control-O>', lambda x: self.openFile())
@@ -97,30 +107,30 @@ class View(Frame):
         root.bind('<Control-o>', lambda x: self.openFile())
         root.bind('<Control-u>', lambda x: self.model.updateYTDL())
         root.bind('<F1>', lambda x: self.aboutEybDl())
-        root.config(menu=self.menubar)
+        root.config(menu=menubar)
 
         #create video table frame
         middleFrame = Frame(root)
         
         #create tree view(the video table)
-        self.videoTree = ttk.Treeview(middleFrame, selectmode='browse')
-        self.videoTree['show'] = 'headings'
-        self.videoTree['columns'] = ('id', 'name', 'url', 'status')
-        self.videoTree.column('id', anchor='w', width=50, stretch='false', minwidth=50)
-        self.videoTree.heading('id', text='')
-        self.videoTree.column('name', anchor='w', width=300, stretch='true', minwidth=100)
-        self.videoTree.heading('name', text='Video Name')
-        self.videoTree.column('url', anchor='w', width=200, stretch='true', minwidth=100)
-        self.videoTree.heading('url', text='URL')
-        self.videoTree.column('status', anchor='center', stretch='false', minwidth=50)
-        self.videoTree.heading('status', text='Status')
-        scroll = ttk.Scrollbar(middleFrame, orient= VERTICAL, command = self.videoTree.yview)
+        videoTree = ttk.Treeview(middleFrame, selectmode='browse')
+        videoTree['show'] = 'headings'
+        videoTree['columns'] = ('id', 'name', 'url', 'status')
+        videoTree.column('id', anchor='w', width=50, stretch='false', minwidth=50)
+        videoTree.heading('id', text='')
+        videoTree.column('name', anchor='w', width=300, stretch='true', minwidth=100)
+        videoTree.heading('name', text='Video Name')
+        videoTree.column('url', anchor='w', width=200, stretch='true', minwidth=100)
+        videoTree.heading('url', text='URL')
+        videoTree.column('status', anchor='center', stretch='false', minwidth=50)
+        videoTree.heading('status', text='Status')
+        scroll = ttk.Scrollbar(middleFrame, orient= VERTICAL, command = videoTree.yview)
         scroll.pack(side=RIGHT, fill=Y)
-        self.videoTree['yscroll'] = scroll.set
-        self.videoTree.configure(yscrollcommand=scroll.set)
-        self.videoTree.bind("<Button-3>", self.rightClickVideo)
-        self.videoTree.bind("<Double-1>", self.doubleClickVideo)
-        self.videoTree.pack(expand=YES, fill=BOTH)
+        videoTree['yscroll'] = scroll.set
+        videoTree.configure(yscrollcommand=scroll.set)
+        videoTree.bind("<Button-3>", self.rightClickVideo)
+        videoTree.bind("<Double-1>", self.doubleClickVideo)
+        videoTree.pack(expand=YES, fill=BOTH)
 
         #display video table
         middleFrame.pack(side=TOP, fill=BOTH, expand=YES)
@@ -213,8 +223,17 @@ class View(Frame):
         downloadButtonFrame.pack(side=BOTTOM, expand=YES, anchor=SE, fill=Y)
         bottomFrame.pack(side=BOTTOM, fill=BOTH)
 
-        #set outer class variables so that widgets can be accessed by methods
-        self.options = optionsChoicesFrame
+        #set outer class variables so that widgets can be accessed by other methods
+        self.menubar = menubar
+        self.filemenu = filemenu
+        self.aboutmenu = aboutmenu
+        self.videoTree = videoTree
+        self.buttons["browse_button"] = browseButton
+        self.buttons["download_button"] = download
+        self.comboBoxes["format"] = formatBox
+        self.comboBoxes["quality"] = qualityBox
+        self.comboBoxes["naming"] = fileNameBox
+        self.entries["output_path"] = outputFolder
 
 
     def say_clicked(self):
