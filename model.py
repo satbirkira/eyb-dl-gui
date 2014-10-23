@@ -109,6 +109,7 @@ class Model():
                 self.setStatus(old_status)
             else:
                 #load the bookmark using regex
+                print ("here200")
                 self.setStatus(State.OPENING_FILE)
                 self.updateAllViews()
                 content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
@@ -154,9 +155,9 @@ class Model():
                     self.setStatus(old_status)
                 else:
                     self.setStatus(State.FILE_OPENED)
-                print ("here")
-            self.updateAllViews()
-            print ("here")
+                print ("here5")
+        self.updateAllViews()
+        print ("here")
     
     def updateYTDL(self):
         if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
