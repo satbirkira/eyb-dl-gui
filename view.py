@@ -12,50 +12,8 @@ import datetime
 import subprocess
 import time
 from time import gmtime, strftime
+from constants import State, Format, Quality, titleFormat, videoState
 
-class State:
-    NO_OPEN_FILE = 0
-    EMPTY_FILE = 1
-    OPENING_FILE = 2
-    FILE_OPENED = 3
-    DOWNLOADING = 4
-    UPDATING = 5
-    YTDL_UPDATE_FAIL = 6
-    YTDL_UPDATE_SUCCESS = 7
-
-class Format:
-    FLV = 0
-    MP4 = 1
-    MP3 = 2
-    WAV = 3
-    toString = {0: "Flv",
-                1: "Mp4",
-                2: "Mp3",
-                3: "Wav"}
-
-class Quality:
-    NORMAL = 0
-    HIGH = 1
-    toString = {0: "Normal",
-                1: "High"}
-
-class titleFormat:
-    USE_BOOKMARK_TITLE = 0
-    USE_YOUTUBE_TITLE = 1
-    toString = {0: "Use Bookmark Title",
-                1: "Use Youtube Title"}
-
-class videoState:
-    QUEUED = 0
-    SKIPPED = 1
-    CANCELLED = 2
-    CONVERTING = 3
-    DOWNLOADING = 4
-    toString = {0: "Queued",
-                1: "Skip",
-                2: "Cancelled",
-                3: "Converting",
-                4: "Downloading"}
 
 
 class View(Frame):
@@ -63,6 +21,7 @@ class View(Frame):
     #Initialize widgets of interest that will have it's states altered at runtime.
     #The reason for doing this is because no widget is added dynamically. All are
     #   created only once during the initialization phase.
+    root = None
     menubar = None
     filemenu = None
     aboutmenu = None
@@ -86,6 +45,7 @@ class View(Frame):
         self.comboBoxes["quality"]['state'] = "disabled"
         self.comboBoxes["naming"]['state'] = "disabled"
         self.entries["output_path"]['state'] = "disabled"
+        
     # File Menu Index
     # [0] = Open File
     # [1] = Update youtube-dl
@@ -97,10 +57,12 @@ class View(Frame):
         self.filemenu.entryconfig(1,state="normal")
     def disableUpdate(self):
         self.filemenu.entryconfig(1,state="disabled")
+        
     def enableDownload(self):
         self.buttons["download_button"]['state'] = "normal"
     def disableDownload(self):
         self.buttons["download_button"]['state'] = "disabled"
+        
     def updateDownloadButtonText(self):
         if self.model.getStatus() == State.DOWNLOADING:
             self.buttons["download_button"]['text'] = "Pause Download"
@@ -113,23 +75,24 @@ class View(Frame):
         self.disableUpdate()
         self.disableDownload()
     
-    def __init__(self, master, model):
+    def __init__(self, root, model):
         #create window frame
-        Frame.__init__(self, master)
-        root.geometry("800x350")
+        self.root = root
+        Frame.__init__(self, self.root)
+        self.root.geometry("800x350")
         self.model = model
         self.iniWidgets()
 	
     def iniWidgets(self):
         #create menu
-        menubar = Menu(root)
+        menubar = Menu(self.root)
         
         #add file menu
         filemenu = Menu(menubar, tearoff=0)
         filemenu.add_command(label="Open", command=self.openFile, accelerator="Ctrl+O")
         filemenu.add_command(label="Update youtube-dl", command=self.model.updateYTDL, accelerator="Ctrl+U")
         filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=root.destroy, accelerator="Alt+F4")
+        filemenu.add_command(label="Exit", command=self.root.destroy, accelerator="Alt+F4")
         menubar.add_cascade(label="File", menu=filemenu)
 
         #add help menu
@@ -141,15 +104,15 @@ class View(Frame):
         menubar.add_cascade(label="About", menu=aboutmenu)
 
         #display menu
-        root.bind('<Control-O>', lambda x: self.openFile())
-        root.bind('<Control-U>', lambda x: self.model.updateYTDL())
-        root.bind('<Control-o>', lambda x: self.openFile())
-        root.bind('<Control-u>', lambda x: self.model.updateYTDL())
-        root.bind('<F1>', lambda x: self.aboutEybDl())
-        root.config(menu=menubar)
+        self.root.bind('<Control-O>', lambda x: self.openFile())
+        self.root.bind('<Control-U>', lambda x: self.model.updateYTDL())
+        self.root.bind('<Control-o>', lambda x: self.openFile())
+        self.root.bind('<Control-u>', lambda x: self.model.updateYTDL())
+        self.root.bind('<F1>', lambda x: self.aboutEybDl())
+        self.root.config(menu=menubar)
 
         #create video table frame
-        middleFrame = Frame(root)
+        middleFrame = Frame(self.root)
         
         #create tree view(the video table)
         videoTree = ttk.Treeview(middleFrame, selectmode='browse')
@@ -175,10 +138,10 @@ class View(Frame):
         middleFrame.pack(side=TOP, fill=BOTH, expand=YES)
 
         #create bottom frame for options, status of the current video and download button
-        bottomFrame = Frame(root, bg=root.cget('bg'))
+        bottomFrame = Frame(self.root, bg=self.root.cget('bg'))
         downloadButtonFrame = Frame(bottomFrame, relief=GROOVE, borderwidth=1)
         optionsChoicesFrame = Frame(bottomFrame, relief=GROOVE, borderwidth=1)
-        statusFrame = Frame(bottomFrame, relief=GROOVE, borderwidth=1,  bg=root.cget('bg'))
+        statusFrame = Frame(bottomFrame, relief=GROOVE, borderwidth=1,  bg=self.root.cget('bg'))
 
         #make frames use grid layout
         optionsChoicesFrame.grid()
@@ -288,7 +251,7 @@ class View(Frame):
         if(self.videoTree.selection() != ""):
             item = self.videoTree.selection()[0]
             print(self.videoTree.item(item,"values"))
-            menu = Menu(root, tearoff=0)
+            menu = Menu(self.root, tearoff=0)
             menu.add_command(label="Open Video",
                              command= lambda : webbrowser.open_new_tab(self.videoTree.item(item,"values")[2]))
             if (self.videoTree.item(item,"values")[3] == "Queued"):
@@ -368,9 +331,9 @@ class View(Frame):
 		
     def aboutEybDl(self):
         #setup toplevel
-        aboutYTDL = Toplevel(root)
+        aboutYTDL = Toplevel(self.root)
         aboutYTDL.geometry("270x200")
-        aboutYTDL.transient(root)
+        aboutYTDL.transient(self.root)
         aboutYTDL.grab_set()
         aboutYTDL.title("About eyb-dl")
         aboutYTDL.resizable(FALSE,FALSE)
@@ -406,226 +369,3 @@ class View(Frame):
 
         #bind accelerator
         website.bind("<Button-1>", lambda x: webbrowser.open_new_tab('http://satbirkira.com'))
-
-#===
-#===	
-
-#Program Class
-class Model():
-
-    #bookmark info
-    filepath = ""
-    videos=[]
-    program_status = State.NO_OPEN_FILE
-    output_title_format = titleFormat.USE_BOOKMARK_TITLE
-
-    #mvc views
-    views =[]
-
-    #default HQ FLV
-    outputFormat = Format.FLV
-    outputQuality = Quality.NORMAL
-
-    #video downloading info
-    current_video = 0
-    outputPath = ""
-
-    def getFilePath(self):
-        return self.filepath
-    def setFilePath(self, path):
-        print(path)
-        self.filepath = path
-        
-    def getOutputPath(self):
-        return self.outputPath
-    def setOutputPath(self, path):
-        self.outputPath = path
-
-    def getOutputFormat(self):
-        return self.outputFormat
-    def setOutputFormat(self, outputFormat):
-        self.outputFormat = outputFormat
-
-    def getOutputTitleFormat(self):
-        return self.output_title_format
-    def setOutputTitleFormat(self, titleFormat):
-        self.output_title_format = titleFormat
-
-    def getOutputQuality(self):
-        return self.outputQuality
-    def setOutputQuality(self, quality):
-        self.outputQuality = quality
-
-
-    def getStatus(self):
-        return self.program_status
-    def setStatus(self, status):
-        self.program_status = status
-
-
-    def numberOfVideos(self):
-        return len(self.videos)
-
-    def currentVideoStatus(self):
-        i = self.current_video
-        return self.videos[i]["Info"]["Status"]
-    
-
-    def __init__(self):
-        self.setOutputPath(os.getcwd())
-        self.setStatus(State.NO_OPEN_FILE)
-        
-    def addView(self, view):
-        self.views.append(view)
-        view.update()
-
-    def updateAllViews(self):
-        print ("here1")
-        for view in self.views:
-            view.update()
-            print ("here2")
-
-    def say_clicked(self):
-         print ("clicked!")
-
-    
-        
-
-    def loadBookmark(self, filepath):
-        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
-            #get bookmark filepath
-            self.setFilePath(filepath)
-            old_status = self.getStatus()
-            try:
-                check_file = open(self.getFilePath())
-                print ("File opened successfully.")
-                check_file.close()
-            except:
-                self.setStatus(State.EMPTY_FILE)
-                self.updateAllViews()
-                self.setStatus(old_status)
-            else:
-                #load the bookmark using regex
-                self.setStatus(State.OPENING_FILE)
-                self.updateAllViews()
-                content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
-                print ("Reading from bookmarks.html ..")
-                bookmark_file = content_file.read()
-                print ("Applying Regular Expression ..")
-                regex = re.compile('.*<DT><A\sHREF=".*www\.youtube\.com/watch\?.*v=([^&#"]*)\S*".*>(.*)</A>\n?')
-                r = regex.search(bookmark_file)
-                videos = regex.findall(bookmark_file)
-                #remove duplicate videos and create proper links
-                newlist = []
-                newlist_urls = []
-                for video in videos:
-                    formated_title = video[1].replace("\\", " ")#replace single slash
-                    formated_title = video[1].replace("?", " ")
-                    formated_title = video[1].replace(".", " ")
-                    formated_title = video[1].replace("|", " ")
-                    formated_title = video[1].replace("*", " ")
-                    formated_title = video[1].replace("<", " ")
-                    formated_title = video[1].replace(">", " ")
-                    formated_title = video[1].replace("\"", " ")
-                    formated_title = video[1].replace("/", " ")
-                    formated_title = video[1].replace(":", " ")
-                    if(len(formated_title) > 255):
-                            formated_title = formated_title[0:254]
-                    formated_video = {"Url": "www.youtube.com/watch?v=" + video[0],
-                                      "Title": formated_title,
-                                      "Info": {
-                                                "Status": videoState.QUEUED,
-                                                "Percent": 0,
-                                                "Size": 0,
-                                                "Speed": 0,
-                                                "remainingTime": 0}
-                                      }
-                    if formated_video["Url"] not in newlist_urls:
-                            newlist_urls.append(formated_video["Url"])
-                            newlist.append(formated_video)
-                #store fixed video list
-                self.videos = newlist
-                if self.numberOfVideos() == 0:
-                    self.setStatus(State.EMPTY_FILE)
-                    self.updateAllViews()
-                    self.setStatus(old_status)
-                else:
-                    self.setStatus(State.FILE_OPENED)
-                print ("here")
-            self.updateAllViews()
-            print ("here")
-    
-    def updateYTDL(self):
-        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
-            print(os.getcwd()+"\youtube-dl.exe --update")
-            old_status = self.getStatus()
-            self.setStatus(State.UPDATING)
-            self.updateAllViews()
-            update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update",
-                                                 stderr=subprocess.PIPE,
-                                                 stdout=subprocess.PIPE,
-                                                 universal_newlines=True)
-            err = update_youtube_dl.communicate()
-            out = update_youtube_dl.communicate()[0]
-            errcode = update_youtube_dl.returncode
-            print(out)
-            if len(err[1].strip()) !=0  or re.search("ERROR:", out):
-                print ("Standard error of youtube-dl:")
-                print (err[1])
-                print ("Using current version of youtube-dl ..")
-                self.setStatus(State.YTDL_UPDATE_FAIL)
-                self.updateAllViews()
-            else:
-                self.setStatus(State.YTDL_UPDATE_SUCCESS)
-                self.updateAllViews()
-            self.setStatus(old_status)
-            self.updateAllViews()
-        
-
-    def startDownloading(self):
-        if self.getStatus() == State.FILE_OPENED:
-            print ("DOWNLOADING!")
-            self.setStatus(State.DOWNLOADING)
-            self.updateAllViews()
-        elif self.getStatus() == State.DOWNLOADING:
-            print ("PAUSED!")
-            self.setStatus(State.FILE_OPENED)
-            self.updateAllViews()
-
-
-    def videoStatus(self, i):
-        return self.videos[i]["Info"]["Status"]
-
-    def changeVideoStatus(self, i, status):
-        self.videos[i]["Info"]["Status"] = status
-        
-    def cancelVideo(self):
-        return None
-
-    def removeItemFromList(self, i):
-        i = int(i)
-        if self.videoStatus(i) == videoState.QUEUED:
-            self.changeVideoStatus(i, videoState.SKIPPED)
-            self.updateAllViews() #for some reason, this must be repeated at every condition
-        elif self.videoStatus(i)== videoState.DOWNLOADING or self.videoStatus(i) == videoState.CONVERTING:
-            self.cancelVideo()
-            self.changeVideoStatus(i, videoState.CANCELLED)
-            self.updateAllViews()
-        
-    def queueItemFromList(self, i):
-        i = int(i)
-        if self.videoStatus(i) == videoState.SKIPPED:
-            self.changeVideoStatus(i, videoState.QUEUED)
-        self.updateAllViews()
-
-
-# Initial Window Widget
-root = Tk()
-root.title("Easy Youtube Bookmark Downloader 3.0")
-root.minsize(700,350)
-# Open View
-mainModel = Model()
-mainView = View(root, mainModel)
-mainModel.addView(mainView)
-# Enter GUI Event Loop
-root.mainloop()
