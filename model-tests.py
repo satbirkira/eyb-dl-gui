@@ -30,12 +30,12 @@ class TestModel(unittest.TestCase):
         model.setOutputQuality(Quality.HIGH)
         model.setStatus(State.OPENING_FILE)
 
-        self.assertEqual(model.getFilePath, "C:\bookmark.html")
-        self.assertEqual(model.getOutputPath, "C:\downloads")
-        self.assertEqual(model.getOutputFormat, Format.WAV)
-        self.assertEqual(model.getOutputTitleFormat, titleFormat.USE_YOUTUBE_TITLE)
-        self.assertEqual(model.getOutputQuality, Quality.HIGH)
-        self.assertEqual(model.getStatus, State.OPENING_FILE)
+        self.assertEqual(model.getFilePath(), "C:\bookmark.html")
+        self.assertEqual(model.getOutputPath(), "C:\downloads")
+        self.assertEqual(model.getOutputFormat(), Format.WAV)
+        self.assertEqual(model.getOutputTitleFormat(), titleFormat.USE_YOUTUBE_TITLE)
+        self.assertEqual(model.getOutputQuality(), Quality.HIGH)
+        self.assertEqual(model.getStatus(), State.OPENING_FILE)
 
 
 
