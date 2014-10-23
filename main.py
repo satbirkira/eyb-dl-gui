@@ -1,17 +1,5 @@
 #Imports
 from tkinter import *
-import webbrowser
-import os
-import array
-import tkinter.messagebox
-from tkinter import ttk
-import re
-import codecs
-import sys
-import datetime
-import subprocess
-import time
-from time import gmtime, strftime
 from constants import State, Format, Quality, titleFormat, videoState
 from model import Model
 import view
