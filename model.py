@@ -44,7 +44,7 @@ class Model():
         print("Title Format = " + titleFormat.toString[self.getOutputTitleFormat()])
         print("Quality = " + Quality.toString[self.getOutputQuality()])
         print("Status = " + State.toString[self.getStatus()])
-        print("Current Video ID = " + str(self.getCurrentVideoID()) +"/"+ str(self.numberOfVideos()))
+        print("Current Video ID = " + str(self.getCurrentVideoID()) +". Total # Videos: "+ str(self.numberOfVideos()))
         print("Video Info = ")
         print(self.currentVideoInformation())
         print("==================================")        
