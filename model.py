@@ -53,27 +53,32 @@ class Model():
         return self.filepath
     def setFilePath(self, path):
         self.filepath = path
+        self.updateAllViews()
         
     def getOutputPath(self):
         return self.outputPath
     def setOutputPath(self, path):
         self.outputPath = path
+        self.updateAllViews()
 
     def getOutputFormat(self):
         return self.outputFormat
     def setOutputFormat(self, outputFormat):
         self.outputFormat = outputFormat
+        self.updateAllViews()
+        
 
     def getOutputTitleFormat(self):
         return self.output_title_format
     def setOutputTitleFormat(self, titleFormat):
         self.output_title_format = titleFormat
+        self.updateAllViews()
 
     def getOutputQuality(self):
         return self.outputQuality
     def setOutputQuality(self, quality):
         self.outputQuality = quality
-
+        self.updateAllViews()
 
     def getStatus(self):
         return self.program_status

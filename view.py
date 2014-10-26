@@ -77,6 +77,8 @@ class View(Frame):
     
     def __init__(self, root, model):
         #create window frame
+        root.title("Easy Youtube Bookmark Downloader 3.0 -- By Satbir Saini")
+        root.minsize(700,350)
         self.root = root
         Frame.__init__(self, self.root)
         self.root.geometry("800x350")
@@ -159,7 +161,6 @@ class View(Frame):
         qualityBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
         fileNameBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
 
-        formatBox.get()
 
         #fill in comboboxes using weird hack because formatBox["values"] is a weird list
         # and won't do listOfFormats = Format.toString.values() (bad string casting)
@@ -183,11 +184,8 @@ class View(Frame):
         qualityBox.current(self.model.getOutputQuality())
         fileNameBox.current(self.model.getOutputTitleFormat())
 
-        #add listeners for when an option is selected
-        formatBox.bind("<<ComboboxSelected>>", self.model.setOutputFormat(formatBox['values'].index(formatBox.get())))
-        qualityBox.bind("<<ComboboxSelected>>", self.model.setOutputQuality(qualityBox['values'].index(qualityBox.get())))
-        fileNameBox.bind("<<ComboboxSelected>>", self.model.setOutputTitleFormat(fileNameBox['values'].index(fileNameBox.get())))
 
+        
 
         #create output folder entry
         outputFolder = Entry(optionsChoicesFrame, width=40)
@@ -239,6 +237,12 @@ class View(Frame):
         self.comboBoxes["quality"] = qualityBox
         self.comboBoxes["naming"] = fileNameBox
         self.entries["output_path"] = outputFolder
+
+        #add listeners for the comoboxes here, since we need to refrence the values list at runtime
+        self.comboBoxes["format"].bind("<<ComboboxSelected>>", lambda x: self.model.setOutputFormat(self.comboBoxes["format"]['values'].index(formatBox.get())))
+        self.comboBoxes["quality"].bind("<<ComboboxSelected>>", lambda x: self.model.setOutputQuality(self.comboBoxes["quality"]['values'].index(qualityBox.get())))
+        self.comboBoxes["naming"].bind("<<ComboboxSelected>>", lambda x: self.model.setOutputTitleFormat(self.comboBoxes["naming"]['values'].index(fileNameBox.get())))
+
 	
         
 
@@ -294,6 +298,9 @@ class View(Frame):
             id += 1
 
     def update(self):
+        print(self.comboBoxes["format"]['values'].index(self.comboBoxes["format"].get()))
+        print(self.comboBoxes["quality"]['values'].index(self.comboBoxes["quality"].get()))
+        print(self.comboBoxes["naming"]['values'].index(self.comboBoxes["naming"].get()))
         #Update video table and download button text right away
         self.updateVideoTable()
         self.updateDownloadButtonText()
