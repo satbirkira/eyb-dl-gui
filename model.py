@@ -206,12 +206,16 @@ class Model():
         
 
     def startDownloading(self):
-        if self.getStatus() == State.FILE_OPENED:
-            self.setStatus(State.DOWNLOADING)
-            self.updateAllViews()
-        elif self.getStatus() == State.DOWNLOADING:
-            self.setStatus(State.FILE_OPENED)
-            self.updateAllViews()
+        if self.validateOutputPath():
+            if self.getStatus() == State.FILE_OPENED:
+                self.setStatus(State.DOWNLOADING)
+                self.updateAllViews()
+            elif self.getStatus() == State.DOWNLOADING:
+                self.setStatus(State.FILE_OPENED)
+                self.updateAllViews()
+
+    def validateOutputPath(self):
+        pass
 
 
     def videoStatus(self, i):

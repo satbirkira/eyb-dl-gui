@@ -161,7 +161,6 @@ class View(Frame):
         qualityBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
         fileNameBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
 
-
         #fill in comboboxes using weird hack because formatBox["values"] is a weird list
         # and won't do listOfFormats = Format.toString.values() (bad string casting)
         listOfFormats = []
@@ -184,16 +183,20 @@ class View(Frame):
         qualityBox.current(self.model.getOutputQuality())
         fileNameBox.current(self.model.getOutputTitleFormat())
 
-
-        
+        #add listeners for combobozes
+        formatBox.bind("<<ComboboxSelected>>", lambda x: self.model.setOutputFormat(formatBox['values'].index(formatBox.get())))
+        qualityBox.bind("<<ComboboxSelected>>", lambda x: self.model.setOutputQuality(qualityBox['values'].index(qualityBox.get())))
+        fileNameBox.bind("<<ComboboxSelected>>", lambda x: self.model.setOutputTitleFormat(fileNameBox['values'].index(fileNameBox.get())))
 
         #create output folder entry
-        outputFolder = Entry(optionsChoicesFrame, width=40)
+        sv = StringVar()
+        sv.trace("w", lambda name, index, mode, sv=sv: self.model.setOutputPath(sv.get()))
+        outputFolder = Entry(optionsChoicesFrame, width=40, textvariable=sv)
         outputFolder.insert(0, self.model.getOutputPath())
         outputFolder.xview('moveto', 1)
 
         #create browse button
-        browseButton = Button(optionsChoicesFrame, width=10, text="Browse")
+        browseButton = Button(optionsChoicesFrame, width=10, text="Browse", command=self.browseOutputPath)
                 
         #add all input options to the grid
         formatBox.grid(row=1, column=2, sticky=W)
@@ -238,13 +241,13 @@ class View(Frame):
         self.comboBoxes["naming"] = fileNameBox
         self.entries["output_path"] = outputFolder
 
-        #add listeners for the comoboxes here, since we need to refrence the values list at runtime
-        self.comboBoxes["format"].bind("<<ComboboxSelected>>", lambda x: self.model.setOutputFormat(self.comboBoxes["format"]['values'].index(formatBox.get())))
-        self.comboBoxes["quality"].bind("<<ComboboxSelected>>", lambda x: self.model.setOutputQuality(self.comboBoxes["quality"]['values'].index(qualityBox.get())))
-        self.comboBoxes["naming"].bind("<<ComboboxSelected>>", lambda x: self.model.setOutputTitleFormat(self.comboBoxes["naming"]['values'].index(fileNameBox.get())))
-
-	
-        
+    def browseOutputPath(self):
+        folderpath = filedialog.askdirectory()
+        #no need to tell model here, the StringVar has already been setup to do so
+        self.entries["output_path"].delete(0, len(self.entries["output_path"].get()))
+        self.entries["output_path"].insert(0, folderpath)
+        self.entries["output_path"].xview('moveto', 1)
+	        
 
     def say_clicked(self):
          print ("clicked!")
