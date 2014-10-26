@@ -7,6 +7,14 @@ class State:
     UPDATING = 5
     YTDL_UPDATE_FAIL = 6
     YTDL_UPDATE_SUCCESS = 7
+    toString = {0: "No Open File",
+                1: "Empty File",
+                2: "Opening Gile",
+                3: "File Opened",
+                4: "Downloading",
+                5: "Updating",
+                6: "Youtube Downloader Update Failed",
+                7: "Youtube Downloader Update Success"}
 
 class Format:
     FLV = 0

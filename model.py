@@ -36,10 +36,22 @@ class Model():
     current_video = 0
     outputPath = ""
 
+    def debug(self):
+        print("==================================")
+        print("File Path = " + self.getFilePath())
+        print("Output Path = " + self.getOutputPath())
+        print("Video Format = " + Format.toString[self.getOutputFormat()])
+        print("Title Format = " + titleFormat.toString[self.getOutputTitleFormat()])
+        print("Quality = " + Quality.toString[self.getOutputQuality()])
+        print("Status = " + State.toString[self.getStatus()])
+        print("Current Video ID = " + str(self.getCurrentVideoID()) +"/"+ str(self.numberOfVideos()))
+        print("Video Info = ")
+        print(self.currentVideoInformation())
+        print("==================================")        
+
     def getFilePath(self):
         return self.filepath
     def setFilePath(self, path):
-        print(path)
         self.filepath = path
         
     def getOutputPath(self):
@@ -72,9 +84,15 @@ class Model():
     def numberOfVideos(self):
         return len(self.videos)
 
-    def currentVideoStatus(self):
+    def getCurrentVideoID(self):
+        return self.current_video
+
+    def currentVideoInformation(self):
         i = self.current_video
-        return self.videos[i]["Info"]["Status"]
+        if i > self.numberOfVideos()-1 or i < 0:
+            return {}
+        else:
+            return self.videos[i]
     
 
     def __init__(self):
@@ -86,10 +104,9 @@ class Model():
         view.update()
 
     def updateAllViews(self):
-        print ("here1")
+        self.debug()
         for view in self.views:
             view.update()
-            print ("here2")
 
     def say_clicked(self):
          print ("clicked!")
@@ -109,7 +126,6 @@ class Model():
                 self.setStatus(old_status)
             else:
                 #load the bookmark using regex
-                print ("here200")
                 self.setStatus(State.OPENING_FILE)
                 self.updateAllViews()
                 content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
@@ -155,10 +171,8 @@ class Model():
                     self.setStatus(old_status)
                 else:
                     self.setStatus(State.FILE_OPENED)
-                print ("here5")
         self.updateAllViews()
-        print ("here")
-    
+        
     def updateYTDL(self):
         if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
             print(os.getcwd()+"\youtube-dl.exe --update")
@@ -188,11 +202,9 @@ class Model():
 
     def startDownloading(self):
         if self.getStatus() == State.FILE_OPENED:
-            print ("DOWNLOADING!")
             self.setStatus(State.DOWNLOADING)
             self.updateAllViews()
         elif self.getStatus() == State.DOWNLOADING:
-            print ("PAUSED!")
             self.setStatus(State.FILE_OPENED)
             self.updateAllViews()
 

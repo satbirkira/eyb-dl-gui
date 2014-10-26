@@ -159,6 +159,8 @@ class View(Frame):
         qualityBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
         fileNameBox = ttk.Combobox(optionsChoicesFrame, state='readonly')
 
+        formatBox.get()
+
         #fill in comboboxes using weird hack because formatBox["values"] is a weird list
         # and won't do listOfFormats = Format.toString.values() (bad string casting)
         listOfFormats = []
@@ -176,15 +178,16 @@ class View(Frame):
             listOfTitleFormats.append(titleFormatStr)
         fileNameBox['values']= listOfTitleFormats
         
-        #add listeners for when an option is selected
-        formatBox.bind("<<ComboboxSelected>>", self.say_clicked())
-        qualityBox.bind("<<ComboboxSelected>>", self.say_clicked())
-        fileNameBox.bind("<<ComboboxSelected>>", self.say_clicked())
-
         #setup what is selected in the combobox
         formatBox.current(self.model.getOutputFormat())
         qualityBox.current(self.model.getOutputQuality())
         fileNameBox.current(self.model.getOutputTitleFormat())
+
+        #add listeners for when an option is selected
+        formatBox.bind("<<ComboboxSelected>>", self.model.setOutputFormat(formatBox['values'].index(formatBox.get())))
+        qualityBox.bind("<<ComboboxSelected>>", self.model.setOutputQuality(qualityBox['values'].index(qualityBox.get())))
+        fileNameBox.bind("<<ComboboxSelected>>", self.model.setOutputTitleFormat(fileNameBox['values'].index(fileNameBox.get())))
+
 
         #create output folder entry
         outputFolder = Entry(optionsChoicesFrame, width=40)
@@ -291,8 +294,6 @@ class View(Frame):
             id += 1
 
     def update(self):
-        print(self.model.program_status)
-        print("self.updateVideoTable()")
         #Update video table and download button text right away
         self.updateVideoTable()
         self.updateDownloadButtonText()
