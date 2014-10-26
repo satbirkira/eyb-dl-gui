@@ -215,7 +215,15 @@ class Model():
                 self.updateAllViews()
 
     def validateOutputPath(self):
-        pass
+        old_status = self.getStatus()
+        if not (os.path.isdir(self.getOutputPath())):
+            self.setStatus(State.INVALID_OUTPUT_PATH)
+            self.updateAllViews()
+            self.setStatus(old_status)
+            self.updateAllViews()
+            return False
+        else:
+            return True
 
 
     def videoStatus(self, i):

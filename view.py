@@ -338,6 +338,10 @@ class View(Frame):
             tkinter.messagebox.showinfo(
             "YouTube-DL",
             "The newest version of youtube-dl will now be used.")
+        elif self.model.getStatus() == State.INVALID_OUTPUT_PATH:
+            tkinter.messagebox.showerror(
+            "Invalid Output Path",
+            "The output directory is invalid.")
         
 		
     def aboutEybDl(self):
