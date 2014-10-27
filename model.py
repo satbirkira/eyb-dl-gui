@@ -143,6 +143,7 @@ class Model():
                 #remove duplicate videos and create proper links
                 newlist = []
                 newlist_urls = []
+                id = 0;
                 for video in videos:
                     formated_title = video[1].replace("\\", " ")#replace single slash
                     formated_title = video[1].replace("?", " ")
@@ -156,6 +157,8 @@ class Model():
                     formated_title = video[1].replace(":", " ")
                     if(len(formated_title) > 255):
                             formated_title = formated_title[0:254]
+                    if(formated_title == ""):
+                        formated_title = "Title Avaliable When Downloading [" + str(id) + "]"
                     formated_video = {"Url": "www.youtube.com/watch?v=" + video[0],
                                       "Title": formated_title,
                                       "Info": {
@@ -168,6 +171,7 @@ class Model():
                     if formated_video["Url"] not in newlist_urls:
                             newlist_urls.append(formated_video["Url"])
                             newlist.append(formated_video)
+                            id += 1
                 #store fixed video list
                 self.videos = newlist
                 if self.numberOfVideos() == 0:

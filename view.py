@@ -267,7 +267,6 @@ class View(Frame):
             menu = Menu(self.root, tearoff=0)
 
             def queueSelection():
-                print("!!!!!!!!!!!!")
                 indices = []
                 #first get indices since refrences to the videos become invalid after
                 #queueItemFromList() is called. This is due to emptying the videofree
@@ -277,7 +276,6 @@ class View(Frame):
                 for index in indices:
                     self.model.queueItemFromList(index)
             def removeSelection():
-                print("!!!!!!!!!!!!")
                 indices = []
                 #first get indices since refrences to the videos become invalid after
                 #queueItemFromList() is called. This is due to emptying the videofree
