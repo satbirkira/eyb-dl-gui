@@ -140,6 +140,15 @@ class Model():
                 regex = re.compile('.*<DT><A\sHREF=".*www\.youtube\.com/watch\?.*v=([^&#"]*)\S*".*>(.*)</A>\n?')
                 r = regex.search(bookmark_file)
                 videos = regex.findall(bookmark_file)
+                #if we could not extract bookmarks, simply scan for youtube videos
+                if(len(videos) == 0):
+                    regex = re.compile('v=([^&#\n]*)')
+                    r = regex.findall(bookmark_file)
+                    videos = regex.findall(bookmark_file)
+                    #fill with empty title
+                    print(videos)
+                    for i in range(0, len(videos)):
+                        videos[i] = (videos[i], "")
                 #remove duplicate videos and create proper links
                 newlist = []
                 newlist_urls = []

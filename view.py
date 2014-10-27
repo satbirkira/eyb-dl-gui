@@ -77,7 +77,7 @@ class View(Frame):
     
     def __init__(self, root, model):
         #create window frame
-        root.title("Easy Youtube Bookmark Downloader 3.0 -- By Satbir Saini")
+        root.title("Unofficial Youtube-dl GUI 3.0 -- By Satbir Saini")
         root.minsize(700,350)
         self.root = root
         Frame.__init__(self, self.root)
@@ -379,10 +379,10 @@ class View(Frame):
         aboutYTDL.resizable(FALSE,FALSE)
         
         #add strings
-        about_heading = "Easy Youtube Bookmark Downloader"
+        about_heading = "Unofficial Youtube-dl GUI"
         about_body = "The easiest way to batch archieve videos. "
         about_body += "Originally developed as an interactive terminal program. "
-        about_body += "Dedicated to Kathan Desai and Harsh Oza."
+        about_body += "Dedicated to Kathan Desai and Harsh Oza. And /g/"
         about_version = "Version 3.0 [24/09/14]"
         author_text = "Author: Satbir Saini (satbir.kira@gmail.com)"
         author_website = "satbirkira.com"
