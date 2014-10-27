@@ -268,8 +268,8 @@ class View(Frame):
 
             def queueSelection():
                 indices = []
-                #first get indices since refrences to the videos become invalid after
-                #queueItemFromList() is called. This is due to emptying the videofree
+                #first get indices since references to the videos become invalid after
+                #queueItemFromList() is called. This is due to emptying the videotree
                 #and refilling on updating the view
                 for item in self.videoTree.selection():
                     indices.append(self.videoTree.item(item,"values")[0])
@@ -277,9 +277,6 @@ class View(Frame):
                     self.model.queueItemFromList(index)
             def removeSelection():
                 indices = []
-                #first get indices since refrences to the videos become invalid after
-                #queueItemFromList() is called. This is due to emptying the videofree
-                #and refilling on updating the view
                 for item in self.videoTree.selection():
                     indices.append(self.videoTree.item(item,"values")[0])
                 for index in indices:
@@ -287,7 +284,6 @@ class View(Frame):
 
             def openSelection():
                 for item in self.videoTree.selection():
-                    print(self.videoTree.item(item, "values"))
                     webbrowser.open_new_tab(self.videoTree.item(item,"values")[2])
             
             menu.add_command(label="Open Video",
