@@ -146,15 +146,16 @@ class Model():
                 id = 0;
                 for video in videos:
                     formated_title = video[1].replace("\\", " ")#replace single slash
-                    formated_title = video[1].replace("?", " ")
-                    formated_title = video[1].replace(".", " ")
-                    formated_title = video[1].replace("|", " ")
-                    formated_title = video[1].replace("*", " ")
-                    formated_title = video[1].replace("<", " ")
-                    formated_title = video[1].replace(">", " ")
-                    formated_title = video[1].replace("\"", " ")
-                    formated_title = video[1].replace("/", " ")
-                    formated_title = video[1].replace(":", " ")
+                    formated_title = formated_title.replace("?", " ")
+                    formated_title = formated_title.replace(".", " ")
+                    formated_title = formated_title.replace("|", " ")
+                    formated_title = formated_title.replace("*", " ")
+                    formated_title = formated_title.replace("<", " ")
+                    formated_title = formated_title.replace(">", " ")
+                    formated_title = formated_title.replace("\"", " ")
+                    formated_title = formated_title.replace("/", " ")
+                    formated_title = formated_title.replace(":", " ")
+                    formated_title = formated_title.strip()
                     if(len(formated_title) > 255):
                             formated_title = formated_title[0:254]
                     if(formated_title == ""):
