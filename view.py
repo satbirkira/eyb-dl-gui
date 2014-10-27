@@ -117,7 +117,7 @@ class View(Frame):
         middleFrame = Frame(self.root)
         
         #create tree view(the video table)
-        videoTree = ttk.Treeview(middleFrame, selectmode='browse')
+        videoTree = ttk.Treeview(middleFrame, selectmode='extended')#selectmode='browse'
         videoTree['show'] = 'headings'
         videoTree['columns'] = ('id', 'name', 'url', 'status')
         videoTree.column('id', anchor='w', width=50, stretch='false', minwidth=50)
@@ -244,9 +244,10 @@ class View(Frame):
     def browseOutputPath(self):
         folderpath = filedialog.askdirectory()
         #no need to tell model here, the StringVar has already been setup to do so
-        self.entries["output_path"].delete(0, len(self.entries["output_path"].get()))
-        self.entries["output_path"].insert(0, folderpath)
-        self.entries["output_path"].xview('moveto', 1)
+        if(len(folderpath) != 0):
+            self.entries["output_path"].delete(0, len(self.entries["output_path"].get()))
+            self.entries["output_path"].insert(0, folderpath)
+            self.entries["output_path"].xview('moveto', 1)
 	        
 
     def say_clicked(self):
@@ -258,24 +259,53 @@ class View(Frame):
             webbrowser.open_new_tab(self.videoTree.item(item,"values")[2])
 
     def rightClickVideo(self, event):
-        if(self.videoTree.selection() != ""):
-            item = self.videoTree.selection()[0]
+        if(len(self.videoTree.selection()) != 0):
+            print(len(self.videoTree.selection()))
+            #put context menu over the item that was right clicked
+            item = self.videoTree.identify('item', event.x,event.y)
             print(self.videoTree.item(item,"values"))
             menu = Menu(self.root, tearoff=0)
+
+            def queueSelection():
+                print("!!!!!!!!!!!!")
+                indices = []
+                #first get indices since refrences to the videos become invalid after
+                #queueItemFromList() is called. This is due to emptying the videofree
+                #and refilling on updating the view
+                for item in self.videoTree.selection():
+                    indices.append(self.videoTree.item(item,"values")[0])
+                for index in indices:
+                    self.model.queueItemFromList(index)
+            def removeSelection():
+                print("!!!!!!!!!!!!")
+                indices = []
+                #first get indices since refrences to the videos become invalid after
+                #queueItemFromList() is called. This is due to emptying the videofree
+                #and refilling on updating the view
+                for item in self.videoTree.selection():
+                    indices.append(self.videoTree.item(item,"values")[0])
+                for index in indices:
+                    self.model.removeItemFromList(index)
+
+            def openSelection():
+                for item in self.videoTree.selection():
+                    print(self.videoTree.item(item, "values"))
+                    webbrowser.open_new_tab(self.videoTree.item(item,"values")[2])
+            
             menu.add_command(label="Open Video",
-                             command= lambda : webbrowser.open_new_tab(self.videoTree.item(item,"values")[2]))
+                             command= lambda : openSelection())
             if (self.videoTree.item(item,"values")[3] == "Queued"):
                 menu.add_command(label="Skip Selected",
-                                 command= lambda : self.model.removeItemFromList(self.videoTree.item(item,"values")[0]))
+                                 command= lambda : removeSelection())
             elif (self.videoTree.item(item,"values")[3] == "Skip"):
                 menu.add_command(label="Queue Selected",
-                                 command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+                                 command= lambda : queueSelection())
             elif (self.videoTree.item(item,"values")[3] == "Converting"):
                 menu.add_command(label="Cancel Selected",
-                                 command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+                                 command= lambda : removeSelection())
             elif (self.videoTree.item(item,"values")[3] == "Downloading"):
                 menu.add_command(label="Cancel Selected",
-                                 command= lambda : self.model.queueItemFromList(self.videoTree.item(item,"values")[0]))
+                                 command= lambda : removeSelection())
             #no case for cancelled, there is no current easy way to requeue a cancelled download.
             menu.post(event.x_root, event.y_root)
 		
@@ -301,9 +331,6 @@ class View(Frame):
             id += 1
 
     def update(self):
-        print(self.comboBoxes["format"]['values'].index(self.comboBoxes["format"].get()))
-        print(self.comboBoxes["quality"]['values'].index(self.comboBoxes["quality"].get()))
-        print(self.comboBoxes["naming"]['values'].index(self.comboBoxes["naming"].get()))
         #Update video table and download button text right away
         self.updateVideoTable()
         self.updateDownloadButtonText()
