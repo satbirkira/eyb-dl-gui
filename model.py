@@ -242,7 +242,6 @@ class Model():
 
     def removeItemFromList(self, i):
         i = int(i)
-        print("The index we are removing is: " + str(i))
         if self.videoStatus(i) == videoState.QUEUED:
             self.changeVideoStatus(i, videoState.SKIPPED)
             self.updateAllViews() #for some reason, this must be repeated at every condition
@@ -253,7 +252,6 @@ class Model():
         
     def queueItemFromList(self, i):
         i = int(i)
-        print("The index we are adding is: " + str(i))
         if self.videoStatus(i) == videoState.SKIPPED:
             self.changeVideoStatus(i, videoState.QUEUED)
         self.updateAllViews()
