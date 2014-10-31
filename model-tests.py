@@ -16,6 +16,11 @@ class TestModel(unittest.TestCase):
         model = Model()
         self.assertEqual(model.output_title_format, titleFormat.USE_BOOKMARK_TITLE)
 
+    def test_using_youtube_title_if_non_bookmark(self):
+        model = Model()
+        model.loadBookmark(os.getcwd() + "\\youtube-videos.txt")
+        self.assertEqual(model.output_title_format, titleFormat.USE_YOUTUBE_TITLE)   
+
     def test_default_status(self):
         model = Model()
         self.assertEqual(model.program_status, State.NO_OPEN_FILE)

@@ -149,6 +149,10 @@ class Model():
                     print(videos)
                     for i in range(0, len(videos)):
                         videos[i] = (videos[i], "")
+                    if(len(videos) > 0):
+                        #set title to be determined by youtube
+                        pass
+                    self.setOutputTitleFormat(titleFormat.USE_YOUTUBE_TITLE)
                 #remove duplicate videos and create proper links
                 newlist = []
                 newlist_urls = []
@@ -217,7 +221,8 @@ class Model():
                 self.updateAllViews()
             self.setStatus(old_status)
             self.updateAllViews()
-        
+
+    #WORK HERE
 
     def startDownloading(self):
         if self.validateOutputPath():
