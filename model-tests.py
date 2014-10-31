@@ -60,7 +60,7 @@ class TestModel(unittest.TestCase):
         self.assertEqual(model.getStatus(), State.NO_OPEN_FILE)        
         model.loadBookmark(os.getcwd() + "\\bookmarks.html")
         self.assertEqual(model.getStatus(), State.FILE_OPENED)
-        self.assertEqual(model.numberOfVideos(), 1)
+        self.assertEqual(model.numberOfVideos(), 3)
 
     
     def test_video_skip(self):

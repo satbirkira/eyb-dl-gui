@@ -8,11 +8,14 @@ from tkinter import ttk
 import re
 import codecs
 import sys
+from subprocess import PIPE, Popen
+from threading  import Thread
 import datetime
 import subprocess
 import time
 from time import gmtime, strftime
 from constants import State, Format, Quality, titleFormat, videoState
+from queue import Queue, Empty
 
 
 
@@ -35,6 +38,16 @@ class Model():
     #video downloading info
     current_video = 0
     outputPath = ""
+
+    #make youtube-dl instance avaliable
+    youtube_dl_instance = None
+
+    ON_POSIX = 'posix' in sys.builtin_module_names
+
+    def enqueue_output(out, queue):
+        for line in iter(out.readline, b''):
+            queue.put(line)
+        out.close()
 
     def debug(self):
         print("==================================")
@@ -227,6 +240,8 @@ class Model():
         if self.validateOutputPath():
             if self.getStatus() == State.FILE_OPENED:
                 self.setStatus(State.DOWNLOADING)
+                #download loop here
+                self.downloadCurrentVideo()
                 self.updateAllViews()
             elif self.getStatus() == State.DOWNLOADING:
                 self.setStatus(State.FILE_OPENED)
@@ -256,7 +271,43 @@ class Model():
         return None
 
     def downloadCurrentVideo(self):
-        pass
+        #make sure the refrence is null
+        youtube_dl_instance = None
+        current_video_info = self.currentVideoInformation()
+        
+        #set program name
+        input_command = "youtube-dl "
+
+        #set format and quality
+        if(self.getOutputFormat()==Format.FLV or self.getOutputFormat()==Format.MP4):
+            if(self.getOutputQuality()==Quality.HIGH):
+                input_command += "--max-quality "
+            elif(self.getOutputQuality()==Quality.HIGH):
+                input_command += "--format "
+            input_command += Format.toString[self.getOutputFormat()] + " --recode-video " + Format.toString[self.getOutputFormat()]
+        elif(self.getOutputFormat()==Format.MP3 or self.getOutputFormat()==Format.WAV):
+            input_command += "--extract-audio --audio-format " + Format.toString[self.getOutputFormat()]
+            if(self.getOutputQuality()==Quality.NORMAL):
+                input_command += " --audio-quality 5"
+            elif(self.getOutputQuality()==Quality.HIGH):
+                input_command += " --audio-quality 0"
+
+        #add flags and output path
+        input_command += " --continue --ignore-errors --no-overwrites --no-check-certificate -o \"" + self.getOutputPath() + "\\"
+
+        #set output title
+        if(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
+            input_command += current_video_info["Title"] + ".%(ext)s\" \""
+        elif(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
+            input_command += "%(title)s.%(ext)s\" \"" 
+
+        #add the video url and a restrict filename tag
+        input_command += current_video_info["Url"] + "\" --restrict-filenames"
+
+        TestText2 = input_command.decode('utf8')
+        sys.stdout.write(TestText2)
+        #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
+
 
     def removeItemFromList(self, i):
         i = int(i)
