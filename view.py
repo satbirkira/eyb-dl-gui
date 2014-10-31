@@ -348,7 +348,6 @@ class View(Frame):
             self.enableDownload()
         elif self.model.getStatus() == State.DOWNLOADING:
             self.enableDownload()
-            #set downloading button text to say pause
         elif self.model.getStatus() == State.UPDATING:
             pass
         elif self.model.getStatus() == State.YTDL_UPDATE_FAIL:
@@ -363,6 +362,10 @@ class View(Frame):
             tkinter.messagebox.showerror(
             "Invalid Output Path",
             "The output directory is invalid.")
+        #update options widgets
+        self.comboBoxes["format"].current(self.model.getOutputFormat())
+        self.comboBoxes["quality"].current(self.model.getOutputQuality())
+        self.comboBoxes["naming"].current(self.model.getOutputTitleFormat())
         
 		
     def aboutEybDl(self):
