@@ -9,7 +9,7 @@ import re
 import codecs
 import sys
 from subprocess import PIPE, Popen
-from threading  import Thread
+from threading  import Thread, Timer
 import datetime
 import subprocess
 import time
@@ -40,14 +40,14 @@ class Model():
     outputPath = ""
 
     #make youtube-dl instance avaliable
-    youtube_dl_instance = None
+    youtube_dl_process = None
+    youtube_dl_stdout_queue = None
+    youtube_dl_stdout_thread = None
+    youtube_dl_stdout_stdout_timer = None
 
     ON_POSIX = 'posix' in sys.builtin_module_names
 
-    def enqueue_output(out, queue):
-        for line in iter(out.readline, b''):
-            queue.put(line)
-        out.close()
+
 
     def debug(self):
         print("==================================")
@@ -240,7 +240,6 @@ class Model():
         if self.validateOutputPath():
             if self.getStatus() == State.FILE_OPENED:
                 self.setStatus(State.DOWNLOADING)
-                #download loop here
                 self.downloadCurrentVideo()
                 self.updateAllViews()
             elif self.getStatus() == State.DOWNLOADING:
@@ -266,9 +265,23 @@ class Model():
         self.videos[i]["Info"]["Status"] = status
         
     def cancelVideo(self):
-        #kill thread, update video meta info, advance counter
-        #call thread to download current video
-        return None
+        #kill thread, clear queue, terminate process
+        self.youtube_dl_stdout_stdout_timer.stop()
+        self.youtube_dl_stdout_thread.stop()
+        self.youtube_dl_process.terminate()
+        self.youtube_dl_stdout_queue.clear()
+        #set them to null
+        self.youtube_dl_stdout_thread = None
+        self.youtube_dl_process = None
+        self.youtube_dl_stdout_queue = None
+        self.youtube_dl_stdout_stdout_timer = None
+        #update video meta info
+        self.videos[self.current_video]["Info"]["Status"] = videoState.QUEUED
+        self.videos[self.current_video]["Info"]["Percent"] = 0
+        self.videos[self.current_video]["Info"]["Size"] = 0
+        self.videos[self.current_video]["Info"]["Speed"] = 0
+        self.videos[self.current_video]["Info"]["remainingTime"] = 0
+        
 
     def downloadCurrentVideo(self):
         #make sure the refrence is null
@@ -277,7 +290,7 @@ class Model():
         
         #set program name
         input_command = "youtube-dl "
-
+        
         #set format and quality
         if(self.getOutputFormat()==Format.FLV or self.getOutputFormat()==Format.MP4):
             if(self.getOutputQuality()==Quality.HIGH):
@@ -298,15 +311,41 @@ class Model():
         #set output title
         if(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
             input_command += current_video_info["Title"] + ".%(ext)s\" \""
-        elif(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
+        elif(self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE):
             input_command += "%(title)s.%(ext)s\" \"" 
 
         #add the video url and a restrict filename tag
         input_command += current_video_info["Url"] + "\" --restrict-filenames"
-
-        TestText2 = input_command.decode('utf8')
-        sys.stdout.write(TestText2)
+                
+        print(input_command)
         #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
+
+        #ope thread and get stdout asynch
+        self.youtube_dl_process = Popen([input_command], stdout=PIPE, bufsize=1, close_fds=self.ON_POSIX)
+        self.youtube_dl_stdout_queue = Queue()
+        self.youtube_dl_stdout_thread = Thread(target=self.enqueue_output, args=(self.youtube_dl_process.stdout, self.youtube_dl_stdout_queue))
+        self.youtube_dl_stdout_thread.daemon = True # thread dies with the program
+        self.youtube_dl_stdout_thread.start()
+        self.update_current_video_info_timer()
+
+    def update_current_video_info_timer(self):
+        # read line without blocking
+        try:  line = self.youtube_dl_stdout_queue.get_nowait() # or q.get(timeout=.1)
+        except Empty:
+            print('no output yet')
+        else:
+            print(line)
+            #check again in a second
+            self.youtube_dl_stdout_stdout_timer.stop()
+            self.youtube_dl_stdout_stdout_timer = Timer(1, update_current_video_info)
+            self.youtube_dl_stdout_stdout_timer.start()
+        
+
+    #add stdout lines to queue
+    def enqueue_output(self, out, queue):
+        for line in iter(out.readline, b''):
+            queue.put(line)
+        out.close()
 
 
     def removeItemFromList(self, i):
