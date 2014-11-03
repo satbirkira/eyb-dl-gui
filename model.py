@@ -126,6 +126,9 @@ class Model():
         for view in self.views:
             view.update()
 
+    def advance_current_video(self):
+        self.current_video += 1
+
     def say_clicked(self):
          print ("clicked!")
 
@@ -299,7 +302,7 @@ class Model():
                 input_command.extend(["--max-quality"])
             elif(self.getOutputQuality()==Quality.NORMAL):
                 input_command.extend(["--format"])
-            input_command.extend([Format.toString[self.getOutputFormat()].lower()])
+            input_command.extend([Format.toString[self.getOutputFormat()]])
         elif(self.getOutputFormat()==Format.MP3 or self.getOutputFormat()==Format.WAV):
             input_command.extend(["--extract-audio", "--audio-format", Format.toString[self.getOutputFormat()].lower()])
             if(self.getOutputQuality()==Quality.NORMAL):
@@ -309,15 +312,15 @@ class Model():
         
     
         #add flags and output path
-        input_command.extend(["--continue", "--ignore-errors", "--no-overwrites", "--no-check-certificate", "-o"])
+        input_command.extend(["--verbose","--newline", "--continue", "--ignore-errors", "--no-overwrites", "--no-check-certificate", "-o"])
        
 
         #set output title
-        if(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
-            input_command.extend([self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s"])
-            
-        elif(self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE):
+        if((self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE) or (current_video_info["Title"].find("Title Avaliable When Downloading") >= 0)):
             input_command.extend([self.getOutputPath() + "\\" + "%(title)s.%(ext)s"])
+        elif(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
+            input_command.extend([self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s"])
+        
             
         #add the video url and a restrict filename tag
         input_command.extend(["http://" + current_video_info["Url"], "--restrict-filenames"])
@@ -326,7 +329,7 @@ class Model():
         print(input_command)
         #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
 
-        #ope thread and get stdout asynch
+        #open thread and get output
         startupinfo = None
         if os.name == 'nt':
             startupinfo = subprocess.STARTUPINFO()
@@ -337,22 +340,38 @@ class Model():
                                                                                  self.youtube_dl_process.stderr,
                                                                                  self.youtube_dl_stdout_queue))
         self.youtube_dl_stdout_thread.daemon = True # thread dies with the program
+        self.youtube_dl_stdout_thread.start()
         self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
         self.update_current_video_info_timer()
-        self.youtube_dl_stdout_thread.start()
+        
+    def finished_all_downloads(self):
+        print("done!")
+        #set status to finished, then to file open
+        pass
 
     def update_current_video_info_timer(self):
         if self.getStatus() == State.DOWNLOADING:
-            # read line without blocking
-            try:  line = self.youtube_dl_stdout_queue.get_nowait() # or q.get(timeout=.1)
-            except Empty:
-                print('no output yet')
-                self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
-                self.youtube_dl_stdout_stdout_timer.start()
+            #download thread finished
+            if(self.youtube_dl_stdout_thread.is_alive() == False):
+                self.advance_current_video()
+                #if not finished all videos
+                if(self.getCurrentVideoID() != self.numberOfVideos()):
+                    self.downloadCurrentVideo()
+                else:
+                    self.finished_all_downloads()
             else:
-                print(line)
-                self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
-                self.youtube_dl_stdout_stdout_timer.start()
+                # read line without blocking
+                try:  line = self.youtube_dl_stdout_queue.get_nowait() # or q.get(timeout=.1)
+                except Empty:
+                    print('no output yet')
+                    self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
+                    self.youtube_dl_stdout_stdout_timer.start()
+                else:
+                    if(str(line).find("ERROR:") >= 0):
+                        pass
+                    print(line)
+                    self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
+                    self.youtube_dl_stdout_stdout_timer.start()
         #if it has started downloading timer set it to 1
 
             

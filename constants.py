@@ -46,8 +46,10 @@ class videoState:
     CANCELLED = 2
     CONVERTING = 3
     DOWNLOADING = 4
+    ERROR = 5
     toString = {0: "Queued",
                 1: "Skip",
                 2: "Cancelled",
                 3: "Converting",
-                4: "Downloading"}
+                4: "Downloading",
+                5: "Error"}
