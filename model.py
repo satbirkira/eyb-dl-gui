@@ -214,7 +214,7 @@ class Model():
             old_status = self.getStatus()
             self.setStatus(State.UPDATING)
             self.updateAllViews()
-            update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl.exe --update",
+            update_youtube_dl = subprocess.Popen(os.getcwd()+"\youtube-dl --update",
                                                  stderr=subprocess.PIPE,
                                                  stdout=subprocess.PIPE,
                                                  universal_newlines=True)
@@ -299,9 +299,9 @@ class Model():
                 input_command.extend(["--max-quality"])
             elif(self.getOutputQuality()==Quality.NORMAL):
                 input_command.extend(["--format"])
-            input_command.extend([Format.toString[self.getOutputFormat()]])
+            input_command.extend([Format.toString[self.getOutputFormat()].lower()])
         elif(self.getOutputFormat()==Format.MP3 or self.getOutputFormat()==Format.WAV):
-            input_command.extend(["--extract-audio", "--audio-format", Format.toString[self.getOutputFormat()]])
+            input_command.extend(["--extract-audio", "--audio-format", Format.toString[self.getOutputFormat()].lower()])
             if(self.getOutputQuality()==Quality.NORMAL):
                 input_command.extend(["--audio-quality 5"])
             elif(self.getOutputQuality()==Quality.HIGH):
@@ -314,10 +314,10 @@ class Model():
 
         #set output title
         if(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
-            input_command.extend([ "\"" + self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s\""])
+            input_command.extend([self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s"])
             
         elif(self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE):
-            input_command.extend([ "\"" + self.getOutputPath() + "\\" + "%(title)s.%(ext)s\""])
+            input_command.extend([self.getOutputPath() + "\\" + "%(title)s.%(ext)s"])
             
         #add the video url and a restrict filename tag
         input_command.extend(["http://" + current_video_info["Url"], "--restrict-filenames"])
@@ -327,13 +327,16 @@ class Model():
         #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
 
         #ope thread and get stdout asynch
-        self.youtube_dl_process = Popen(input_command, stdout=PIPE, stderr=PIPE, bufsize=1, close_fds=self.ON_POSIX)
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        self.youtube_dl_process = Popen(input_command, stdout=PIPE, stderr=PIPE, bufsize=1, close_fds=self.ON_POSIX, startupinfo=startupinfo)
         self.youtube_dl_stdout_queue = Queue()
         self.youtube_dl_stdout_thread = Thread(target=self.enqueue_output, args=(self.youtube_dl_process.stdout,
                                                                                  self.youtube_dl_process.stderr,
                                                                                  self.youtube_dl_stdout_queue))
         self.youtube_dl_stdout_thread.daemon = True # thread dies with the program
-        
         self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
         self.update_current_video_info_timer()
         self.youtube_dl_stdout_thread.start()
