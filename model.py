@@ -289,63 +289,80 @@ class Model():
         current_video_info = self.currentVideoInformation()
         
         #set program name
-        input_command = "youtube-dl "
+        input_command = []
+        input_command.extend(["youtube-dl"])
+        
         
         #set format and quality
         if(self.getOutputFormat()==Format.FLV or self.getOutputFormat()==Format.MP4):
             if(self.getOutputQuality()==Quality.HIGH):
-                input_command += "--max-quality "
-            elif(self.getOutputQuality()==Quality.HIGH):
-                input_command += "--format "
-            input_command += Format.toString[self.getOutputFormat()] + " --recode-video " + Format.toString[self.getOutputFormat()]
+                input_command.extend(["--max-quality"])
+            elif(self.getOutputQuality()==Quality.NORMAL):
+                input_command.extend(["--format"])
+            input_command.extend([Format.toString[self.getOutputFormat()]])
         elif(self.getOutputFormat()==Format.MP3 or self.getOutputFormat()==Format.WAV):
-            input_command += "--extract-audio --audio-format " + Format.toString[self.getOutputFormat()]
+            input_command.extend(["--extract-audio", "--audio-format", Format.toString[self.getOutputFormat()]])
             if(self.getOutputQuality()==Quality.NORMAL):
-                input_command += " --audio-quality 5"
+                input_command.extend(["--audio-quality 5"])
             elif(self.getOutputQuality()==Quality.HIGH):
-                input_command += " --audio-quality 0"
-
+                input_command.extend(["--audio-quality 0"])
+        
+    
         #add flags and output path
-        input_command += " --continue --ignore-errors --no-overwrites --no-check-certificate -o \"" + self.getOutputPath() + "\\"
+        input_command.extend(["--continue", "--ignore-errors", "--no-overwrites", "--no-check-certificate", "-o"])
+       
 
         #set output title
         if(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
-            input_command += current_video_info["Title"] + ".%(ext)s\" \""
+            input_command.extend([ "\"" + self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s\""])
+            
         elif(self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE):
-            input_command += "%(title)s.%(ext)s\" \"" 
-
+            input_command.extend([ "\"" + self.getOutputPath() + "\\" + "%(title)s.%(ext)s\""])
+            
         #add the video url and a restrict filename tag
-        input_command += current_video_info["Url"] + "\" --restrict-filenames"
+        input_command.extend(["http://" + current_video_info["Url"], "--restrict-filenames"])
+        
                 
         print(input_command)
         #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
 
         #ope thread and get stdout asynch
-        self.youtube_dl_process = Popen([input_command], stdout=PIPE, bufsize=1, close_fds=self.ON_POSIX)
+        self.youtube_dl_process = Popen(input_command, stdout=PIPE, stderr=PIPE, bufsize=1, close_fds=self.ON_POSIX)
         self.youtube_dl_stdout_queue = Queue()
-        self.youtube_dl_stdout_thread = Thread(target=self.enqueue_output, args=(self.youtube_dl_process.stdout, self.youtube_dl_stdout_queue))
+        self.youtube_dl_stdout_thread = Thread(target=self.enqueue_output, args=(self.youtube_dl_process.stdout,
+                                                                                 self.youtube_dl_process.stderr,
+                                                                                 self.youtube_dl_stdout_queue))
         self.youtube_dl_stdout_thread.daemon = True # thread dies with the program
-        self.youtube_dl_stdout_thread.start()
+        
+        self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
         self.update_current_video_info_timer()
+        self.youtube_dl_stdout_thread.start()
 
     def update_current_video_info_timer(self):
-        # read line without blocking
-        try:  line = self.youtube_dl_stdout_queue.get_nowait() # or q.get(timeout=.1)
-        except Empty:
-            print('no output yet')
-        else:
-            print(line)
-            #check again in a second
-            self.youtube_dl_stdout_stdout_timer.stop()
-            self.youtube_dl_stdout_stdout_timer = Timer(1, update_current_video_info)
-            self.youtube_dl_stdout_stdout_timer.start()
+        if self.getStatus() == State.DOWNLOADING:
+            # read line without blocking
+            try:  line = self.youtube_dl_stdout_queue.get_nowait() # or q.get(timeout=.1)
+            except Empty:
+                print('no output yet')
+                self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
+                self.youtube_dl_stdout_stdout_timer.start()
+            else:
+                print(line)
+                self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
+                self.youtube_dl_stdout_stdout_timer.start()
+        #if it has started downloading timer set it to 1
+
+            
         
 
     #add stdout lines to queue
-    def enqueue_output(self, out, queue):
+    def enqueue_output(self, out, err, queue):
         for line in iter(out.readline, b''):
             queue.put(line)
         out.close()
+        for line in iter(err.readline, b''):
+            queue.put(line)
+        err.close()
 
 
     def removeItemFromList(self, i):
