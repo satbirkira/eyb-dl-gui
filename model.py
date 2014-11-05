@@ -253,7 +253,7 @@ class Model():
                 self.downloadCurrentVideo()
                 self.updateAllViews()
             elif self.getStatus() == State.DOWNLOADING:
-                if self.videos[self.getCurrentVideoID()]["Info"]["Status"] in [videoState.CONVERTING, videoState.DOWNLOADING]:
+                if self.videos[self.getCurrentVideoID()]["Info"]["Status"] == videoState.DOWNLOADING:
                     self.clean_up_current_video(videoState.QUEUED)
                 self.setStatus(State.FILE_OPENED)
                 self.updateAllViews()
@@ -488,7 +488,7 @@ class Model():
         if self.videoStatus(i) == videoState.QUEUED:
             self.changeVideoStatus(i, videoState.SKIPPED)
             self.updateAllViews() #for some reason, this must be repeated at every condition
-        elif self.videoStatus(i)== videoState.DOWNLOADING or self.videoStatus(i) == videoState.CONVERTING:
+        elif self.videoStatus(i)== videoState.DOWNLOADING:
             self.clean_up_current_video(videoState.CANCELLED)
             self.updateAllViews()
         

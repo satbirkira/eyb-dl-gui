@@ -294,9 +294,6 @@ class View(Frame):
             elif (self.videoTree.item(item,"values")[3] == "Skip"):
                 menu.add_command(label="Queue Selected",
                                  command= lambda : queueSelection())
-            elif (self.videoTree.item(item,"values")[3] == "Converting"):
-                menu.add_command(label="Cancel Selected",
-                                 command= lambda : removeSelection())
             elif (self.videoTree.item(item,"values")[3] == "Downloading"):
                 menu.add_command(label="Cancel Selected",
                                  command= lambda : removeSelection())
