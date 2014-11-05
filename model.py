@@ -128,7 +128,7 @@ class Model():
         view.update()
 
     def updateAllViews(self):
-        self.debug()
+        #self.debug()
         for view in self.views:
             view.update()
 
@@ -324,9 +324,9 @@ class Model():
             elif(self.getOutputFormat()==Format.MP3 or self.getOutputFormat()==Format.WAV):
                 input_command.extend(["--extract-audio", "--audio-format", Format.toString[self.getOutputFormat()].lower()])
                 if(self.getOutputQuality()==Quality.NORMAL):
-                    input_command.extend(["--audio-quality 5"])
+                    input_command.extend(["--audio-quality", "5"])
                 elif(self.getOutputQuality()==Quality.HIGH):
-                    input_command.extend(["--audio-quality 0"])
+                    input_command.extend(["--audio-quality", "0"])
             
             #add flags and output path
             input_command.extend(["--verbose","--newline", "--continue", "--ignore-errors", "--no-overwrites", "--no-check-certificate", "-o"])
@@ -391,7 +391,7 @@ class Model():
             except Empty:
                 break
             else:
-                #skip over debug lines which end up in stderr
+                #skip over [debug] lines which end up in stderr
                 if line.startswith(b"[debug]") == False:
                     lines.append(line)
         #will be full of errors if they occured
