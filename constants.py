@@ -8,6 +8,7 @@ class State:
     YTDL_UPDATE_FAIL = 6
     YTDL_UPDATE_SUCCESS = 7
     INVALID_OUTPUT_PATH = 8
+    COMPLETE = 9
     toString = {0: "No Open File",
                 1: "Empty File",
                 2: "Opening File",
@@ -16,7 +17,8 @@ class State:
                 5: "Updating",
                 6: "Youtube Downloader Update Failed",
                 7: "Youtube Downloader Update Success",
-                8: "Invalid Output Path"}
+                8: "Invalid Output Path",
+		9: "Downloads Complete"}
 
 class Format:
     FLV = 0
@@ -47,9 +49,11 @@ class videoState:
     CONVERTING = 3
     DOWNLOADING = 4
     ERROR = 5
+    COMPLETE = 6
     toString = {0: "Queued",
                 1: "Skip",
                 2: "Cancelled",
                 3: "Converting",
                 4: "Downloading",
-                5: "Error"}
+                5: "Error",
+                6: "Complete"}

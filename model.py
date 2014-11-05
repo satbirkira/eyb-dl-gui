@@ -41,11 +41,14 @@ class Model():
 
     #make youtube-dl instance avaliable
     youtube_dl_process = None
+    youtube_dl_thread = None
     youtube_dl_stdout_queue = None
-    youtube_dl_stdout_thread = None
-    youtube_dl_stdout_stdout_timer = None
+    youtube_dl_stderr_queue = None
+    youtube_dl_output_timer = None
 
     ON_POSIX = 'posix' in sys.builtin_module_names
+
+    error_log_file_name = None
 
 
 
@@ -104,6 +107,9 @@ class Model():
 
     def getCurrentVideoID(self):
         return self.current_video
+
+    def setCurrentVideoID(self, i):
+        self.current_video = i
 
     def currentVideoInformation(self):
         i = self.current_video
@@ -243,9 +249,12 @@ class Model():
         if self.validateOutputPath():
             if self.getStatus() == State.FILE_OPENED:
                 self.setStatus(State.DOWNLOADING)
+                self.error_log_file_name = "error_log_file_" + strftime("%Y-%m-%d_%H_%M_%S") + ".txt"
                 self.downloadCurrentVideo()
                 self.updateAllViews()
             elif self.getStatus() == State.DOWNLOADING:
+                if self.videos[self.getCurrentVideoID()]["Info"]["Status"] in [videoState.CONVERTING, videoState.DOWNLOADING]:
+                    self.clean_up_current_video(videoState.QUEUED)
                 self.setStatus(State.FILE_OPENED)
                 self.updateAllViews()
 
@@ -267,123 +276,210 @@ class Model():
     def changeVideoStatus(self, i, status):
         self.videos[i]["Info"]["Status"] = status
         
-    def cancelVideo(self):
+
+    def cleanUpRefrencesToThreads(self):
         #kill thread, clear queue, terminate process
-        self.youtube_dl_stdout_stdout_timer.stop()
-        self.youtube_dl_stdout_thread.stop()
-        self.youtube_dl_process.terminate()
-        self.youtube_dl_stdout_queue.clear()
+        '''
+        if(self.youtube_dl_output_timer != None): self.youtube_dl_output_timer.cancel()
+        if(self.youtube_dl_thread != None): self.youtube_dl_thread.stop()
+        if(self.youtube_dl_stdout_queue != None): self.youtube_dl_stdout_queue.clear()
+        if(self.youtube_dl_stderr_queue != None): self.youtube_dl_stderr_queue.clear()
+        '''
+        if(self.youtube_dl_process != None): self.youtube_dl_process.terminate()
         #set them to null
-        self.youtube_dl_stdout_thread = None
+        self.youtube_dl_thread = None
         self.youtube_dl_process = None
         self.youtube_dl_stdout_queue = None
-        self.youtube_dl_stdout_stdout_timer = None
-        #update video meta info
-        self.videos[self.current_video]["Info"]["Status"] = videoState.QUEUED
-        self.videos[self.current_video]["Info"]["Percent"] = 0
-        self.videos[self.current_video]["Info"]["Size"] = 0
-        self.videos[self.current_video]["Info"]["Speed"] = 0
-        self.videos[self.current_video]["Info"]["remainingTime"] = 0
+        self.youtube_dl_stderr_queue = None
+        self.youtube_dl_output_timer = None
         
 
     def downloadCurrentVideo(self):
-        #make sure the refrence is null
-        youtube_dl_instance = None
-        current_video_info = self.currentVideoInformation()
-        
-        #set program name
-        input_command = []
-        input_command.extend(["youtube-dl"])
-        
-        
-        #set format and quality
-        if(self.getOutputFormat()==Format.FLV or self.getOutputFormat()==Format.MP4):
-            if(self.getOutputQuality()==Quality.HIGH):
-                input_command.extend(["--max-quality"])
-            elif(self.getOutputQuality()==Quality.NORMAL):
-                input_command.extend(["--format"])
-            input_command.extend([Format.toString[self.getOutputFormat()]])
-        elif(self.getOutputFormat()==Format.MP3 or self.getOutputFormat()==Format.WAV):
-            input_command.extend(["--extract-audio", "--audio-format", Format.toString[self.getOutputFormat()].lower()])
-            if(self.getOutputQuality()==Quality.NORMAL):
-                input_command.extend(["--audio-quality 5"])
-            elif(self.getOutputQuality()==Quality.HIGH):
-                input_command.extend(["--audio-quality 0"])
-        
-    
-        #add flags and output path
-        input_command.extend(["--verbose","--newline", "--continue", "--ignore-errors", "--no-overwrites", "--no-check-certificate", "-o"])
-       
-
-        #set output title
-        if((self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE) or (current_video_info["Title"].find("Title Avaliable When Downloading") >= 0)):
-            input_command.extend([self.getOutputPath() + "\\" + "%(title)s.%(ext)s"])
-        elif(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
-            input_command.extend([self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s"])
-        
+        #if we are downloading for the first time, set all completed video sto queued so they can be retried
+        if(self.getCurrentVideoID() == 0):
+            for video in self.videos:
+                if video["Info"]["Status"] == videoState.COMPLETE:
+                    video["Info"]["Status"] = videoState.QUEUED
+        if(self.getCurrentVideoID() == self.numberOfVideos()):
+            self.finished_all_downloads()
+        elif self.videos[self.getCurrentVideoID()]["Info"]["Status"] in [videoState.SKIPPED, videoState.CANCELLED, videoState.ERROR]:
+            #skip
+            self.advance_current_video()
+            self.downloadCurrentVideo()
+        else:
+            self.cleanUpRefrencesToThreads()
+            current_video_info = self.currentVideoInformation()
             
-        #add the video url and a restrict filename tag
-        input_command.extend(["http://" + current_video_info["Url"], "--restrict-filenames"])
+            #set program name
+            input_command = []
+            input_command.extend(["youtube-dl"])
+            
+            #set format and quality
+            if(self.getOutputFormat()==Format.FLV or self.getOutputFormat()==Format.MP4):
+                if(self.getOutputQuality()==Quality.HIGH):
+                    input_command.extend(["--max-quality"])
+                elif(self.getOutputQuality()==Quality.NORMAL):
+                    input_command.extend(["--format"])
+                input_command.extend([Format.toString[self.getOutputFormat()].lower()])
+            elif(self.getOutputFormat()==Format.MP3 or self.getOutputFormat()==Format.WAV):
+                input_command.extend(["--extract-audio", "--audio-format", Format.toString[self.getOutputFormat()].lower()])
+                if(self.getOutputQuality()==Quality.NORMAL):
+                    input_command.extend(["--audio-quality 5"])
+                elif(self.getOutputQuality()==Quality.HIGH):
+                    input_command.extend(["--audio-quality 0"])
+            
+            #add flags and output path
+            input_command.extend(["--verbose","--newline", "--continue", "--ignore-errors", "--no-overwrites", "--no-check-certificate", "-o"])
         
-                
-        print(input_command)
-        #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
+            #set output title
+            if((self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE) or (current_video_info["Title"].find("Title Avaliable When Downloading") >= 0)):
+                input_command.extend([self.getOutputPath() + "\\" + "%(title)s.%(ext)s"])
+            elif(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
+                input_command.extend([self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s"])
+            
+            #add the video url and a restrict filename tag
+            input_command.extend(["http://" + current_video_info["Url"], "--restrict-filenames"])
+            print(input_command)
+            #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
 
-        #open thread and get output
-        startupinfo = None
-        if os.name == 'nt':
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        self.youtube_dl_process = Popen(input_command, stdout=PIPE, stderr=PIPE, bufsize=1, close_fds=self.ON_POSIX, startupinfo=startupinfo)
-        self.youtube_dl_stdout_queue = Queue()
-        self.youtube_dl_stdout_thread = Thread(target=self.enqueue_output, args=(self.youtube_dl_process.stdout,
-                                                                                 self.youtube_dl_process.stderr,
-                                                                                 self.youtube_dl_stdout_queue))
-        self.youtube_dl_stdout_thread.daemon = True # thread dies with the program
-        self.youtube_dl_stdout_thread.start()
-        self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
-        self.update_current_video_info_timer()
+            #open thread and get output
+            startupinfo = None
+            if os.name == 'nt':
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            self.clean_up_current_video(videoState.DOWNLOADING) 
+            self.youtube_dl_process = Popen(input_command, stdout=PIPE, stderr=PIPE, bufsize=1, close_fds=self.ON_POSIX, startupinfo=startupinfo)
+            self.youtube_dl_stdout_queue = Queue()
+            self.youtube_dl_stderr_queue = Queue()
+            self.youtube_dl_thread = Thread(target=self.enqueue_output, args=(self.youtube_dl_process.stdout,
+                                                                                     self.youtube_dl_process.stderr,
+                                                                                     self.youtube_dl_stdout_queue,
+                                                                                     self.youtube_dl_stderr_queue))
+            self.youtube_dl_thread.daemon = True # thread dies with the program
+            self.youtube_dl_thread.start()
+            self.update_current_video_info_timer()
+            self.updateAllViews()
+            
         
     def finished_all_downloads(self):
+        #this freezes program
         print("done!")
-        #set status to finished, then to file open
-        pass
+        self.setCurrentVideoID(0)
+        print("done!2")
+        self.setStatus(State.COMPLETE)
+        print("done!3")
+        self.updateAllViews()
+        print("done!4")
+        self.setStatus(State.FILE_OPENED)
+        print("done!5")
+        self.updateAllViews()
+        print("done!6")
+
+    def clean_up_current_video(self, videoStateGiven):
+        self.videos[self.getCurrentVideoID()]["Info"]["Status"] = videoStateGiven
+        self.videos[self.getCurrentVideoID()]["Info"]["Percent"] = 0
+        self.videos[self.getCurrentVideoID()]["Info"]["Size"] = 0
+        self.videos[self.getCurrentVideoID()]["Info"]["Speed"] = 0
+        self.videos[self.getCurrentVideoID()]["Info"]["remainingTime"] = 0
+
+    def error_list(self):
+        #check if an error occured
+        stderr = self.youtube_dl_stderr_queue
+        lines = []
+        while True:
+            try:  line = stderr.get_nowait()
+            except Empty:
+                break
+            else:
+                #skip over debug lines which end up in stderr
+                if line.startswith(b"[debug]") == False:
+                    lines.append(line)
+        #will be full of errors if they occured
+        return lines
+        
+    def log_error_to_file(self, error_list):
+        print("----------------")
+        for error in error_list:
+            print(str(error))
+        print("----------------")
+        #a flag to append
+        file = open(self.error_log_file_name, 'a', encoding='utf8')
+        file.write("----------------\n")
+        file.write("Video ID: "+ str(self.getCurrentVideoID()))
+        file.write("\n")
+        file.write("Video Title: "+ self.videos[self.getCurrentVideoID()]["Title"])
+        file.write("\n")
+        file.write("Video URL: "+ self.videos[self.getCurrentVideoID()]["Url"])
+        file.write("\n")
+        file.write("Error: " + ''.join(str(error_list)))
+        file.write("\n")
+        file.write("----------------\n")
+        file.close()
 
     def update_current_video_info_timer(self):
         if self.getStatus() == State.DOWNLOADING:
-            #download thread finished
-            if(self.youtube_dl_stdout_thread.is_alive() == False):
-                self.advance_current_video()
-                #if not finished all videos
-                if(self.getCurrentVideoID() != self.numberOfVideos()):
-                    self.downloadCurrentVideo()
-                else:
-                    self.finished_all_downloads()
-            else:
-                # read line without blocking
-                try:  line = self.youtube_dl_stdout_queue.get_nowait() # or q.get(timeout=.1)
-                except Empty:
-                    print('no output yet')
-                    self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
-                    self.youtube_dl_stdout_stdout_timer.start()
-                else:
-                    if(str(line).find("ERROR:") >= 0):
-                        pass
-                    print(line)
-                    self.youtube_dl_stdout_stdout_timer = Timer(0.25, self.update_current_video_info_timer)
-                    self.youtube_dl_stdout_stdout_timer.start()
-        #if it has started downloading timer set it to 1
-
-            
-        
+                lines = []
+                #if line is empty are we still appending?
+                while True:
+                    try:  line = self.youtube_dl_stdout_queue.get_nowait()
+                    except Empty:
+                        #if the thread is alive
+                        if(self.youtube_dl_process.poll() == None):
+                            #warning, there could be a case where bewteen the try and this poll the dameon dies
+                            #error occured during execution
+                            error_list = self.error_list()
+                            if(len(error_list) > 0):
+                                self.log_error_to_file(error_list)
+                                self.clean_up_current_video(videoState.ERROR)
+                                self.advance_current_video()
+                                self.downloadCurrentVideo()
+                            elif self.videos[self.getCurrentVideoID()]["Info"]["Status"] == videoState.CANCELLED:
+                                self.advance_current_video()
+                                self.downloadCurrentVideo()
+                            else:
+                                #continue
+                                self.youtube_dl_output_timer = Timer(0.05, self.update_current_video_info_timer)
+                                self.youtube_dl_output_timer.start()
+                        #thread exited okay
+                        elif(self.youtube_dl_process.poll() == 0):
+                            #error occured after completion
+                            error_list = self.error_list()
+                            if(len(error_list) > 0):
+                                self.log_error_to_file(error_list)
+                                self.clean_up_current_video(videoState.ERROR)
+                            #completed okay
+                            elif self.videos[self.getCurrentVideoID()]["Info"]["Status"] != videoState.CANCELLED:
+                                self.clean_up_current_video(videoState.COMPLETE)
+                            self.advance_current_video()
+                            self.downloadCurrentVideo()
+                        elif(self.youtube_dl_process.poll() == 1):
+                            error_list = self.error_list()
+                            if(len(error_list) > 0):
+                                self.log_error_to_file(error_list)
+                                self.clean_up_current_video(videoState.ERROR)
+                            self.advance_current_video()
+                            self.downloadCurrentVideo()
+                        break
+                    else:
+                        #use regular expression to set download info
+                        if(str(line).find("[download] Destination:") >= 0):
+                            pass
+                        elif(str(line).find("[download]   0.8% of 7.61MiB at  1.92MiB/s ETA 00:03") >= 0):
+                            pass
+                        #append the line to the lines list
+                        lines.append(line)
+                #print lines to screen
+                for line in lines:
+                    print(str(line))
+                
 
     #add stdout lines to queue
-    def enqueue_output(self, out, err, queue):
+    def enqueue_output(self, out, err, queue_stdout, queue_stderr):
         for line in iter(out.readline, b''):
-            queue.put(line)
+            queue_stdout.put(line)
         out.close()
         for line in iter(err.readline, b''):
-            queue.put(line)
+            queue_stderr.put(line)
         err.close()
 
 
@@ -393,8 +489,7 @@ class Model():
             self.changeVideoStatus(i, videoState.SKIPPED)
             self.updateAllViews() #for some reason, this must be repeated at every condition
         elif self.videoStatus(i)== videoState.DOWNLOADING or self.videoStatus(i) == videoState.CONVERTING:
-            self.cancelVideo()
-            self.changeVideoStatus(i, videoState.CANCELLED)
+            self.clean_up_current_video(videoState.CANCELLED)
             self.updateAllViews()
         
     def queueItemFromList(self, i):

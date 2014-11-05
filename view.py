@@ -362,6 +362,15 @@ class View(Frame):
             tkinter.messagebox.showerror(
             "Invalid Output Path",
             "The output directory is invalid.")
+        elif self.model.getStatus() == State.COMPLETE:
+            '''
+            This has to be run in the main thread.
+            Since we call downloadCurrentVideo() and eventaully finished_all_downloads() which updates the view
+            This call freezes since tkinter is not thread safe. It's more of a headache to work around the issue.
+            tkinter.messagebox.showerror(
+            "Complete Automation",
+            "The task has completed.")
+            '''
         #update options widgets
         self.comboBoxes["format"].current(self.model.getOutputFormat())
         self.comboBoxes["quality"].current(self.model.getOutputQuality())
