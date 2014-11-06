@@ -220,8 +220,8 @@ class View(Frame):
         #add current video status labels        
         Label(statusFrame, text="Video ID:").grid(row=0, column=1, sticky=W)
         Label(statusFrame, text="Percent Done:").grid(row=1, column=1, sticky=W)
-        Label(statusFrame, text="Current Status:").grid(row=2, column=1, sticky=W)
-        Label(statusFrame, text="Speed [kb/s]:").grid(row=3, column=1, sticky=W)
+        Label(statusFrame, text="Video Size:").grid(row=2, column=1, sticky=W)
+        Label(statusFrame, text="Download Speed:").grid(row=3, column=1, sticky=W)
         Label(statusFrame, text="Time Remaining:").grid(row=4, column=1, sticky=W)
 
         #add current video statuses
@@ -326,7 +326,7 @@ class View(Frame):
 		
     def openFile(self):
         if self.model.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
-            filepath = filedialog.askopenfilename()
+            filepath = tkinter.filedialog.askopenfilename()
             self.model.loadBookmark(filepath)
 
     def updateVideoTable(self):
