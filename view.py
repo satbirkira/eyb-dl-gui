@@ -32,6 +32,11 @@ class View(Frame):
                   "quality": None,
                   "naming": None}
     entries = {"output_path": None}
+    labels = {"video_id": None,
+              "percent_done": None,
+              "size":None,
+              "speed":None,
+              "time_remaning":None}
 
     def enableOptions(self):
         self.buttons["browse_button"]['state'] = "normal"
@@ -74,6 +79,13 @@ class View(Frame):
         self.disableOpenFile()
         self.disableUpdate()
         self.disableDownload()
+
+    def clearLabels(self):
+        self.labels["video_id"]['text'] = "N/A"
+        self.labels["percent_done"]['text'] = "N/A"
+        self.labels["size"]['text'] = "N/A"
+        self.labels["speed"]['text'] = "N/A"
+        self.labels["time_remaning"]['text'] = "N/A"
     
     def __init__(self, root, model):
         #create window frame
@@ -213,11 +225,17 @@ class View(Frame):
         Label(statusFrame, text="Time Remaining:").grid(row=4, column=1, sticky=W)
 
         #add current video statuses
-        Label(statusFrame, text="N/A").grid(row=0, column=2, sticky=W)
-        Label(statusFrame, text="N/A").grid(row=1, column=2, sticky=W)
-        Label(statusFrame, text="N/A").grid(row=2, column=2, sticky=W)
-        Label(statusFrame, text="N/A").grid(row=3, column=2, sticky=W)
-        Label(statusFrame, text="N/A").grid(row=4, column=2, sticky=W)
+        video_id_label = Label(statusFrame, text="")
+        percent_label = Label(statusFrame, text="")
+        size_label = Label(statusFrame, text="")
+        speed_label = Label(statusFrame, text="")
+        time_remaning_label = Label(statusFrame, text="")
+        
+        video_id_label.grid(row=0, column=2, sticky=W)
+        percent_label.grid(row=1, column=2, sticky=W)
+        size_label.grid(row=2, column=2, sticky=W)
+        speed_label.grid(row=3, column=2, sticky=W)
+        time_remaning_label.grid(row=4, column=2, sticky=W)
 
         #add download button
         download = Button(downloadButtonFrame, text="N/A", command=self.model.startDownloading)
@@ -240,6 +258,12 @@ class View(Frame):
         self.comboBoxes["quality"] = qualityBox
         self.comboBoxes["naming"] = fileNameBox
         self.entries["output_path"] = outputFolder
+        self.labels["video_id"] = video_id_label
+        self.labels["percent_done"] = percent_label
+        self.labels["size"] = size_label
+        self.labels["speed"] = speed_label
+        self.labels["time_remaning"] = time_remaning_label
+        self.clearLabels()
 
     def browseOutputPath(self):
         folderpath = filedialog.askdirectory()
@@ -327,6 +351,7 @@ class View(Frame):
         self.updateDownloadButtonText()
         #Assume nothing can be used. Enable widgets that are relevent
         self.disableAllWidgets()
+        self.clearLabels()
         #Any states needing a messagebox don't are always reverted to the previous state
         #   by the model. This is so that the view can temporarily see an error occured
         if self.model.getStatus() == State.NO_OPEN_FILE:		
@@ -345,6 +370,11 @@ class View(Frame):
             self.enableDownload()
         elif self.model.getStatus() == State.DOWNLOADING:
             self.enableDownload()
+            self.labels["video_id"]['text'] = str(self.model.getCurrentVideoID())
+            self.labels["percent_done"]['text'] = self.model.currentVideoInformation()["Info"]["Percent"]
+            self.labels["size"]['text'] = self.model.currentVideoInformation()["Info"]["Size"]
+            self.labels["speed"]['text'] = self.model.currentVideoInformation()["Info"]["Speed"]
+            self.labels["time_remaning"]['text'] = self.model.currentVideoInformation()["Info"]["remainingTime"]
         elif self.model.getStatus() == State.UPDATING:
             pass
         elif self.model.getStatus() == State.YTDL_UPDATE_FAIL:

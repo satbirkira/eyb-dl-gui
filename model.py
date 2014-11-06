@@ -165,7 +165,6 @@ class Model():
                 #if we could not extract bookmarks, simply scan for youtube videos
                 if(len(videos) == 0):
                     regex = re.compile('v=([^&#\n]*)')
-                    r = regex.findall(bookmark_file)
                     videos = regex.findall(bookmark_file)
                     #fill with empty title
                     print(videos)
@@ -381,6 +380,7 @@ class Model():
         self.videos[self.getCurrentVideoID()]["Info"]["Size"] = 0
         self.videos[self.getCurrentVideoID()]["Info"]["Speed"] = 0
         self.videos[self.getCurrentVideoID()]["Info"]["remainingTime"] = 0
+        self.updateAllViews()
 
     def error_list(self):
         #check if an error occured
@@ -461,11 +461,20 @@ class Model():
                             self.downloadCurrentVideo()
                         break
                     else:
-                        #use regular expression to set download info
-                        if(str(line).find("[download] Destination:") >= 0):
-                            pass
-                        elif(str(line).find("[download]   0.8% of 7.61MiB at  1.92MiB/s ETA 00:03") >= 0):
-                            pass
+                        #use regular expression to set video title, this is incase the video was not found in a bookmark
+                        #and is missing it's title in the UI. If the title is not missing it will simply overwrite what it was
+                        #originally, having no effect
+                        download_filename = re.match(r"^\[download\] Destination: .*\\(.*)\..*$", line.decode("utf-8"))
+                        if(download_filename != None):
+                            self.videos[self.getCurrentVideoID()]["Title"] = download_filename.group(1)
+
+                        download_states = re.match(r"^\[download\]  (.*) of (.*) at\s{1,2}(.*) ETA (.*).*$", line.decode("utf-8"))
+                        if(download_states != None):
+                            self.videos[self.getCurrentVideoID()]["Info"]["Percent"] = download_states.group(1)
+                            self.videos[self.getCurrentVideoID()]["Info"]["Size"] = download_states.group(2)
+                            self.videos[self.getCurrentVideoID()]["Info"]["Speed"] = download_states.group(3)
+                            self.videos[self.getCurrentVideoID()]["Info"]["remainingTime"] = download_states.group(4)
+                            self.updateAllViews()
                         #append the line to the lines list
                         lines.append(line)
                 #print lines to screen
