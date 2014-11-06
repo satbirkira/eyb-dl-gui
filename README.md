@@ -18,11 +18,19 @@ Features
 -------
 Real time download stats:
 
+![Download Statistics](/screenshots/download_statistics.png?raw=true "Download Statistics")
 
+Skip certain videos and requeue them: 
 
-Skip certain videos and re queue them: 
+![Context Menu](/screenshots/context_menu.png?raw=true "Context Menu")
 
+Uses layout manager correctly for better interaction:
 
+![UI Principles](/screenshots/ui_principles.png?raw=true "UI Principles")
+
+Logs errors to file when they occur
+
+![Error Logging](/screenshots/error_logging.png?raw=true "Error Logging")
 
 License
 -------
