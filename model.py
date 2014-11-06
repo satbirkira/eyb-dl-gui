@@ -13,13 +13,10 @@ from threading  import Thread, Timer
 import datetime
 import subprocess
 import time
-from time import gmtime, strftime
+from time import strftime
 from constants import State, Format, Quality, titleFormat, videoState
 from queue import Queue, Empty
 
-
-
-#Program Class
 class Model():
 
     #bookmark info
@@ -46,82 +43,17 @@ class Model():
     youtube_dl_stderr_queue = None
     youtube_dl_output_timer = None
 
+    #misc variables
     ON_POSIX = 'posix' in sys.builtin_module_names
-
     error_log_file_name = None
-
-
-
-    def debug(self):
-        print("==================================")
-        print("File Path = " + self.getFilePath())
-        print("Output Path = " + self.getOutputPath())
-        print("Video Format = " + Format.toString[self.getOutputFormat()])
-        print("Title Format = " + titleFormat.toString[self.getOutputTitleFormat()])
-        print("Quality = " + Quality.toString[self.getOutputQuality()])
-        print("Status = " + State.toString[self.getStatus()])
-        print("Current Video ID = " + str(self.getCurrentVideoID()) +". Total # Videos: "+ str(self.numberOfVideos()))
-        print("Video Info = ")
-        print(self.currentVideoInformation())
-        print("==================================")        
-
-    def getFilePath(self):
-        return self.filepath
-    def setFilePath(self, path):
-        self.filepath = path
-        self.updateAllViews()
-        
-    def getOutputPath(self):
-        return self.outputPath
-    def setOutputPath(self, path):
-        self.outputPath = path
-        self.updateAllViews()
-
-    def getOutputFormat(self):
-        return self.outputFormat
-    def setOutputFormat(self, outputFormat):
-        self.outputFormat = outputFormat
-        self.updateAllViews()
-        
-
-    def getOutputTitleFormat(self):
-        return self.output_title_format
-    def setOutputTitleFormat(self, titleFormat):
-        self.output_title_format = titleFormat
-        self.updateAllViews()
-
-    def getOutputQuality(self):
-        return self.outputQuality
-    def setOutputQuality(self, quality):
-        self.outputQuality = quality
-        self.updateAllViews()
-
-    def getStatus(self):
-        return self.program_status
-    def setStatus(self, status):
-        self.program_status = status
-
-
-    def numberOfVideos(self):
-        return len(self.videos)
-
-    def getCurrentVideoID(self):
-        return self.current_video
-
-    def setCurrentVideoID(self, i):
-        self.current_video = i
-
-    def currentVideoInformation(self):
-        i = self.current_video
-        if i > self.numberOfVideos()-1 or i < 0:
-            return {}
-        else:
-            return self.videos[i]
-    
 
     def __init__(self):
         self.setOutputPath(os.getcwd())
         self.setStatus(State.NO_OPEN_FILE)
+
+    '''
+        MVC Functions
+    '''
         
     def addView(self, view):
         self.views.append(view)
@@ -132,11 +64,128 @@ class Model():
         for view in self.views:
             view.update()
 
+    '''
+        Getters and Setters
+    '''
+   
+    def getFilePath(self):
+        return self.filepath
+    
+    def setFilePath(self, path):
+        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
+            self.filepath = path
+            self.updateAllViews()
+        
+    def getOutputPath(self):
+        return self.outputPath
+    
+    def setOutputPath(self, path):
+        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
+            self.outputPath = path
+            self.updateAllViews()
+
+    def getOutputFormat(self):
+        return self.outputFormat
+    
+    def setOutputFormat(self, outputFormat):
+        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
+            if outputFormat <= self.getUpperBoundOfConstant(Format)-1 and outputFormat >= 0:
+                self.outputFormat = outputFormat
+                self.updateAllViews()
+        
+    def getOutputTitleFormat(self):
+        return self.output_title_format
+    
+    def setOutputTitleFormat(self, outputTitleFormat):
+        if self.getStatus() not in [State.DOWNLOADING, State.UPDATING]:
+            if outputTitleFormat <= self.getUpperBoundOfConstant(titleFormat)-1 and outputTitleFormat >= 0:
+                self.output_title_format = outputTitleFormat
+                self.updateAllViews()
+
+    def getOutputQuality(self):
+        return self.outputQuality
+    
+    def setOutputQuality(self, quality):
+        if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
+            if quality <= self.getUpperBoundOfConstant(Quality)-1 and quality >= 0:
+                self.outputQuality = quality
+                self.updateAllViews()
+
+    def getStatus(self):
+        return self.program_status
+    
+    def setStatus(self, status):
+        if status <= self.getUpperBoundOfConstant(State)-1 and status >= 0:
+            self.program_status = status
+
+    def videoStatus(self, i):
+        if i <= self.numberOfVideos()-1 and i >= 0:
+            return self.videos[i]["Info"]["Status"]
+
+    def changeVideoStatus(self, i, status):
+        if i <= self.numberOfVideos()-1 and i >= 0:
+            self.videos[i]["Info"]["Status"] = status
+
+    def getVideoList(self):
+        return self.videos
+    
+    def setVideoList(self, videoList):
+        self.videos = videoList
+
+    def removeItemFromList(self, i):
+        i = int(i)
+        if i <= self.numberOfVideos()-1 and i >= 0:
+            if self.videoStatus(i) == videoState.QUEUED:
+                self.changeVideoStatus(i, videoState.SKIPPED)
+                self.updateAllViews() #for some reason, this must be repeated at every condition
+            elif self.videoStatus(i)== videoState.DOWNLOADING:
+                self.clean_up_current_video(videoState.CANCELLED)
+                self.updateAllViews()
+        
+    def queueItemFromList(self, i):
+        i = int(i)
+        if i <= self.numberOfVideos()-1 and i >= 0:
+            if self.videoStatus(i) == videoState.SKIPPED:
+                self.changeVideoStatus(i, videoState.QUEUED)
+            self.updateAllViews()
+
+    def getUpperBoundOfConstant(self, CONSTANT):
+        return len(CONSTANT.toString)
+
+    '''
+        Information Pertaining The Current Video
+    '''
+
+    def getCurrentVideoID(self):
+        return self.current_video
+
+    def setCurrentVideoID(self, i):
+        self.current_video = i
+
+    def numberOfVideos(self):
+        return len(self.videos)
+
+    def currentVideoData(self):
+        i = self.current_video
+        if i > self.numberOfVideos()-1 or i < 0:
+            return {}
+        else:
+            return self.videos[i]
+    
     def advance_current_video(self):
         self.current_video += 1
 
-    def say_clicked(self):
-         print ("clicked!")
+    def clean_up_current_video(self, videoStateGiven):
+        self.currentVideoData()["Info"]["Status"] = videoStateGiven
+        self.currentVideoData()["Info"]["Percent"] = 0
+        self.currentVideoData()["Info"]["Size"] = 0
+        self.currentVideoData()["Info"]["Speed"] = 0
+        self.currentVideoData()["Info"]["remainingTime"] = 0
+        self.updateAllViews()
+
+    '''
+        Loading Video From File
+    '''
 
     def loadBookmark(self, filepath):
         if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
@@ -145,7 +194,7 @@ class Model():
             old_status = self.getStatus()
             try:
                 check_file = open(self.getFilePath())
-                print ("File opened successfully.")
+                #print ("File opened successfully.")
                 check_file.close()
             except:
                 self.setStatus(State.EMPTY_FILE)
@@ -156,9 +205,10 @@ class Model():
                 self.setStatus(State.OPENING_FILE)
                 self.updateAllViews()
                 content_file = codecs.open(self.getFilePath(), 'r', 'utf-8')
-                print ("Reading from bookmarks.html ..")
+                #print ("Reading from bookmarks.html ..")
                 bookmark_file = content_file.read()
-                print ("Applying Regular Expression ..")
+                content_file.close()
+                #print ("Applying Regular Expression ..")
                 regex = re.compile('.*<DT><A\sHREF=".*www\.youtube\.com/watch\?.*v=([^&#"]*)\S*".*>(.*)</A>\n?')
                 r = regex.search(bookmark_file)
                 videos = regex.findall(bookmark_file)
@@ -167,7 +217,7 @@ class Model():
                     regex = re.compile('v=([^&#\n]*)')
                     videos = regex.findall(bookmark_file)
                     #fill with empty title
-                    print(videos)
+                    #print(videos)
                     for i in range(0, len(videos)):
                         videos[i] = (videos[i], "")
                     if(len(videos) > 0):
@@ -207,7 +257,7 @@ class Model():
                             newlist.append(formated_video)
                             id += 1
                 #store fixed video list
-                self.videos = newlist
+                self.setVideoList(newlist)
                 if self.numberOfVideos() == 0:
                     self.setStatus(State.EMPTY_FILE)
                     self.updateAllViews()
@@ -215,10 +265,14 @@ class Model():
                 else:
                     self.setStatus(State.FILE_OPENED)
         self.updateAllViews()
+
+    '''
+        Update youtube-dl
+    '''
         
     def updateYTDL(self):
         if self.getStatus() not in [State.DOWNLOADING, State.OPENING_FILE, State.UPDATING]:
-            print(os.getcwd()+"\youtube-dl.exe --update")
+            #print(os.getcwd()+"\youtube-dl.exe --update")
             old_status = self.getStatus()
             self.setStatus(State.UPDATING)
             self.updateAllViews()
@@ -229,11 +283,11 @@ class Model():
             err = update_youtube_dl.communicate()
             out = update_youtube_dl.communicate()[0]
             errcode = update_youtube_dl.returncode
-            print(out)
+            #print(out)
             if len(err[1].strip()) !=0  or re.search("ERROR:", out):
-                print ("Standard error of youtube-dl:")
-                print (err[1])
-                print ("Using current version of youtube-dl ..")
+                #print ("Standard error of youtube-dl:")
+                #print (err[1])
+                #print ("Using current version of youtube-dl ..")
                 self.setStatus(State.YTDL_UPDATE_FAIL)
                 self.updateAllViews()
             else:
@@ -242,20 +296,9 @@ class Model():
             self.setStatus(old_status)
             self.updateAllViews()
 
-    #WORK HERE
-
-    def startDownloading(self):
-        if self.validateOutputPath():
-            if self.getStatus() == State.FILE_OPENED:
-                self.setStatus(State.DOWNLOADING)
-                self.error_log_file_name = "error_log_file_" + strftime("%Y-%m-%d_%H_%M_%S") + ".txt"
-                self.downloadCurrentVideo()
-                self.updateAllViews()
-            elif self.getStatus() == State.DOWNLOADING:
-                if self.videos[self.getCurrentVideoID()]["Info"]["Status"] == videoState.DOWNLOADING:
-                    self.clean_up_current_video(videoState.QUEUED)
-                self.setStatus(State.FILE_OPENED)
-                self.updateAllViews()
+    '''
+        Functions That Facilitate Downloading
+    '''
 
     def validateOutputPath(self):
         old_status = self.getStatus()
@@ -268,13 +311,18 @@ class Model():
         else:
             return True
 
-
-    def videoStatus(self, i):
-        return self.videos[i]["Info"]["Status"]
-
-    def changeVideoStatus(self, i, status):
-        self.videos[i]["Info"]["Status"] = status
-        
+    def startDownloading(self):
+        if self.validateOutputPath():
+            if self.getStatus() == State.FILE_OPENED:
+                self.setStatus(State.DOWNLOADING)
+                self.error_log_file_name = "error_log_file_" + strftime("%Y-%m-%d_%H_%M_%S") + ".txt"
+                self.downloadCurrentVideo()
+                self.updateAllViews()
+            elif self.getStatus() == State.DOWNLOADING:
+                if self.currentVideoData()["Info"]["Status"] == videoState.DOWNLOADING:
+                    self.clean_up_current_video(videoState.QUEUED)
+                self.setStatus(State.FILE_OPENED)
+                self.updateAllViews()
 
     def cleanUpRefrencesToThreads(self):
         #kill thread, clear queue, terminate process
@@ -301,13 +349,13 @@ class Model():
                     video["Info"]["Status"] = videoState.QUEUED
         if(self.getCurrentVideoID() == self.numberOfVideos()):
             self.finished_all_downloads()
-        elif self.videos[self.getCurrentVideoID()]["Info"]["Status"] in [videoState.SKIPPED, videoState.CANCELLED, videoState.ERROR]:
+        elif self.currentVideoData()["Info"]["Status"] in [videoState.SKIPPED, videoState.CANCELLED, videoState.ERROR]:
             #skip
             self.advance_current_video()
             self.downloadCurrentVideo()
         else:
             self.cleanUpRefrencesToThreads()
-            current_video_info = self.currentVideoInformation()
+            current_video_info = self.currentVideoData()
             
             #set program name
             input_command = []
@@ -338,7 +386,7 @@ class Model():
             
             #add the video url and a restrict filename tag
             input_command.extend(["http://" + current_video_info["Url"], "--restrict-filenames"])
-            print(input_command)
+            #print(input_command)
             #http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
 
             #open thread and get output
@@ -359,27 +407,12 @@ class Model():
             self.update_current_video_info_timer()
             self.updateAllViews()
             
-        
     def finished_all_downloads(self):
         #this freezes program
-        print("done!")
         self.setCurrentVideoID(0)
-        print("done!2")
         self.setStatus(State.COMPLETE)
-        print("done!3")
         self.updateAllViews()
-        print("done!4")
         self.setStatus(State.FILE_OPENED)
-        print("done!5")
-        self.updateAllViews()
-        print("done!6")
-
-    def clean_up_current_video(self, videoStateGiven):
-        self.videos[self.getCurrentVideoID()]["Info"]["Status"] = videoStateGiven
-        self.videos[self.getCurrentVideoID()]["Info"]["Percent"] = 0
-        self.videos[self.getCurrentVideoID()]["Info"]["Size"] = 0
-        self.videos[self.getCurrentVideoID()]["Info"]["Speed"] = 0
-        self.videos[self.getCurrentVideoID()]["Info"]["remainingTime"] = 0
         self.updateAllViews()
 
     def error_list(self):
@@ -397,25 +430,6 @@ class Model():
         #will be full of errors if they occured
         return lines
         
-    def log_error_to_file(self, error_list):
-        print("----------------")
-        for error in error_list:
-            print(str(error))
-        print("----------------")
-        #a flag to append
-        file = open(self.error_log_file_name, 'a', encoding='utf8')
-        file.write("----------------\n")
-        file.write("Video ID: "+ str(self.getCurrentVideoID()))
-        file.write("\n")
-        file.write("Video Title: "+ self.videos[self.getCurrentVideoID()]["Title"])
-        file.write("\n")
-        file.write("Video URL: "+ self.videos[self.getCurrentVideoID()]["Url"])
-        file.write("\n")
-        file.write("Error: " + ''.join(str(error_list)))
-        file.write("\n")
-        file.write("----------------\n")
-        file.close()
-
     def update_current_video_info_timer(self):
         if self.getStatus() == State.DOWNLOADING:
                 lines = []
@@ -433,7 +447,7 @@ class Model():
                                 self.clean_up_current_video(videoState.ERROR)
                                 self.advance_current_video()
                                 self.downloadCurrentVideo()
-                            elif self.videos[self.getCurrentVideoID()]["Info"]["Status"] == videoState.CANCELLED:
+                            elif self.currentVideoData()["Info"]["Status"] == videoState.CANCELLED:
                                 self.advance_current_video()
                                 self.downloadCurrentVideo()
                             else:
@@ -448,7 +462,7 @@ class Model():
                                 self.log_error_to_file(error_list)
                                 self.clean_up_current_video(videoState.ERROR)
                             #completed okay
-                            elif self.videos[self.getCurrentVideoID()]["Info"]["Status"] != videoState.CANCELLED:
+                            elif self.currentVideoData()["Info"]["Status"] != videoState.CANCELLED:
                                 self.clean_up_current_video(videoState.COMPLETE)
                             self.advance_current_video()
                             self.downloadCurrentVideo()
@@ -466,23 +480,22 @@ class Model():
                         #originally, having no effect
                         download_filename = re.match(r"^\[download\] Destination: .*\\(.*)\..*$", line.decode("utf-8"))
                         if(download_filename != None):
-                            self.videos[self.getCurrentVideoID()]["Title"] = download_filename.group(1)
-
+                            self.currentVideoData()["Title"] = download_filename.group(1)
                         download_states = re.match(r"^\[download\]  (.*) of (.*) at\s{1,2}(.*) ETA (.*).*$", line.decode("utf-8"))
                         if(download_states != None):
-                            self.videos[self.getCurrentVideoID()]["Info"]["Percent"] = download_states.group(1)
-                            self.videos[self.getCurrentVideoID()]["Info"]["Size"] = download_states.group(2)
-                            self.videos[self.getCurrentVideoID()]["Info"]["Speed"] = download_states.group(3)
-                            self.videos[self.getCurrentVideoID()]["Info"]["remainingTime"] = download_states.group(4)
+                            self.currentVideoData()["Info"]["Percent"] = download_states.group(1)
+                            self.currentVideoData()["Info"]["Size"] = download_states.group(2)
+                            self.currentVideoData()["Info"]["Speed"] = download_states.group(3)
+                            self.currentVideoData()["Info"]["remainingTime"] = download_states.group(4)
                             self.updateAllViews()
                         #append the line to the lines list
                         lines.append(line)
                 #print lines to screen
-                for line in lines:
-                    print(str(line))
+                #for line in lines:
+                    #print(str(line))
                 
 
-    #add stdout lines to queue
+    #add stdout and stderr lines to queue
     def enqueue_output(self, out, err, queue_stdout, queue_stderr):
         for line in iter(out.readline, b''):
             queue_stdout.put(line)
@@ -491,18 +504,41 @@ class Model():
             queue_stderr.put(line)
         err.close()
 
+    '''
+        Debugging and Error Logging Functions
+    '''
 
-    def removeItemFromList(self, i):
-        i = int(i)
-        if self.videoStatus(i) == videoState.QUEUED:
-            self.changeVideoStatus(i, videoState.SKIPPED)
-            self.updateAllViews() #for some reason, this must be repeated at every condition
-        elif self.videoStatus(i)== videoState.DOWNLOADING:
-            self.clean_up_current_video(videoState.CANCELLED)
-            self.updateAllViews()
-        
-    def queueItemFromList(self, i):
-        i = int(i)
-        if self.videoStatus(i) == videoState.SKIPPED:
-            self.changeVideoStatus(i, videoState.QUEUED)
-        self.updateAllViews()
+    def log_error_to_file(self, error_list):
+        #print("----------------")
+        #for error in error_list:
+        #    print(str(error))
+        #print("----------------")
+        #a flag to append
+        file = open(self.error_log_file_name, 'a', encoding='utf8')
+        file.write("----------------\n")
+        file.write("Video ID: "+ str(self.getCurrentVideoID()))
+        file.write("\n")
+        file.write("Video Title: "+ self.currentVideoData()["Title"])
+        file.write("\n")
+        file.write("Video URL: "+ self.currentVideoData()["Url"])
+        file.write("\n")
+        file.write("Error: " + ''.join(str(error_list)))
+        file.write("\n")
+        file.write("----------------\n")
+        file.close()
+
+    def debug(self):
+        print("==================================")
+        print("File Path = " + self.getFilePath())
+        print("Output Path = " + self.getOutputPath())
+        print("Video Format = " + Format.toString[self.getOutputFormat()])
+        print("Title Format = " + titleFormat.toString[self.getOutputTitleFormat()])
+        print("Quality = " + Quality.toString[self.getOutputQuality()])
+        print("Status = " + State.toString[self.getStatus()])
+        print("Current Video ID = " + str(self.getCurrentVideoID()) +". Total # Videos: "+ str(self.numberOfVideos()))
+        print("Video Info = ")
+        print(self.currentVideoData())
+        print("==================================")
+
+    def say_clicked(self):
+         print ("clicked!")

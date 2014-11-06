@@ -284,10 +284,10 @@ class View(Frame):
 
     def rightClickVideo(self, event):
         if(len(self.videoTree.selection()) != 0):
-            print(len(self.videoTree.selection()))
+            #print(len(self.videoTree.selection()))
             #put context menu over the item that was right clicked
             item = self.videoTree.identify('item', event.x,event.y)
-            print(self.videoTree.item(item,"values"))
+            #print(self.videoTree.item(item,"values"))
             menu = Menu(self.root, tearoff=0)
 
             def queueSelection():
@@ -333,7 +333,7 @@ class View(Frame):
         for item in self.videoTree.get_children():
             self.videoTree.delete(item)
         id = 0
-        for video in self.model.videos:
+        for video in self.model.getVideoList():
             self.videoTree.insert('',
                                   'end',
                                   text='',
@@ -371,10 +371,10 @@ class View(Frame):
         elif self.model.getStatus() == State.DOWNLOADING:
             self.enableDownload()
             self.labels["video_id"]['text'] = str(self.model.getCurrentVideoID())
-            self.labels["percent_done"]['text'] = self.model.currentVideoInformation()["Info"]["Percent"]
-            self.labels["size"]['text'] = self.model.currentVideoInformation()["Info"]["Size"]
-            self.labels["speed"]['text'] = self.model.currentVideoInformation()["Info"]["Speed"]
-            self.labels["time_remaning"]['text'] = self.model.currentVideoInformation()["Info"]["remainingTime"]
+            self.labels["percent_done"]['text'] = self.model.currentVideoData()["Info"]["Percent"]
+            self.labels["size"]['text'] = self.model.currentVideoData()["Info"]["Size"]
+            self.labels["speed"]['text'] = self.model.currentVideoData()["Info"]["Speed"]
+            self.labels["time_remaning"]['text'] = self.model.currentVideoData()["Info"]["remainingTime"]
         elif self.model.getStatus() == State.UPDATING:
             pass
         elif self.model.getStatus() == State.YTDL_UPDATE_FAIL:
@@ -418,7 +418,7 @@ class View(Frame):
         about_body = "The easiest way to batch archieve videos. "
         about_body += "Originally developed as an interactive terminal program. "
         about_body += "Dedicated to Kathan Desai and Harsh Oza. And /g/"
-        about_version = "Version 3.0 [24/09/14]"
+        about_version = "Version 3.0 [06/11/14]"
         author_text = "Author: Satbir Saini (satbir.kira@gmail.com)"
         author_website = "satbirkira.com"
 
