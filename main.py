@@ -13,4 +13,5 @@ mainModel = Model()
 mainView = view.View(root, mainModel)
 mainModel.addView(mainView)
 # Enter GUI Event Loop
+root.wm_iconbitmap('icon.ico')
 root.mainloop()
