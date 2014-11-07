@@ -17,7 +17,7 @@ Also allows the option to download HQ of the above formats.
 
 Download
 -------
-Windows: http://www.satbirkira.com/files/eyb-dl-gui.zip
+Windows: http://www.satbirkira.com/files/eyb-dl-gui.rar
 
 Features
 -------
