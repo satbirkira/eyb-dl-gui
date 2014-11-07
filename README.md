@@ -9,15 +9,15 @@ Usage
 The application accepts two formats of input. A browser bookmark export or a text files containing youtube videos.
 
 
-Download
--------
-Windows: http://www.satbirkira.com/files/eyb-dl-gui.zip
-
 Settings
 -------
 Available Formats: FLV, MP4, MP3, WAV
 
 Also allows the option to download HQ of the above formats.
+
+Download
+-------
+Windows: http://www.satbirkira.com/files/eyb-dl-gui.zip
 
 Features
 -------
