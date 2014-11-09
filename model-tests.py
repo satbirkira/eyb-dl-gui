@@ -2,6 +2,8 @@ import unittest
 from model import Model
 from constants import State, Format, Quality, titleFormat, videoState
 import os
+import time
+from time import clock, time
  
 class TestModel(unittest.TestCase):
  
@@ -130,7 +132,16 @@ class TestModel(unittest.TestCase):
         self.assertEqual(model.getOutputPath(), "A")
         self.assertEqual(model.getOutputFormat(), Format.FLV)
         self.assertEqual(model.getOutputTitleFormat(), titleFormat.USE_BOOKMARK_TITLE)
-        self.assertEqual(model.getOutputQuality(), Quality.NORMAL)        
+        self.assertEqual(model.getOutputQuality(), Quality.NORMAL)
+
+    def test_benchmark_model_bookmark_regex(self):
+        #just curious how long this takes
+        model = Model()  
+        start = time()
+        clock()
+        model.loadBookmark(os.getcwd() + "\\test-files\\bookmark_1k_bomb.html")
+        seconds = time() - start
+        print("Loading Bookmark Files Took:", clock(), "Cycles. Seconds:", seconds)
         
  
 if __name__ == '__main__':
