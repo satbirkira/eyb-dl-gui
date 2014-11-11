@@ -354,7 +354,7 @@ class View(Frame):
         self.disableAllWidgets()
         self.clearLabels()
         #Any states needing a messagebox don't are always reverted to the previous state
-        #   by the model. This is so that the view can temporarily see an error occured
+        #   by the model. This is so that the view can temporarily see an error occurred
         if self.model.getStatus() == State.NO_OPEN_FILE:		
             self.enableOpenFile()
             self.enableUpdate()
@@ -416,7 +416,7 @@ class View(Frame):
         
         #add strings
         about_heading = "Unofficial Youtube-dl GUI"
-        about_body = "The easiest way to batch archieve videos. "
+        about_body = "The easiest way to batch archive videos. "
         about_body += "Originally developed as an interactive terminal program. "
         about_body += "Dedicated to Kathan Desai and Harsh Oza. And /g/"
         about_version = "Version 3.0 [06/11/14]"

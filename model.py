@@ -36,7 +36,7 @@ class Model():
     current_video = 0
     outputPath = ""
 
-    #make youtube-dl instance avaliable
+    #make youtube-dl instance available
     youtube_dl_process = None
     youtube_dl_thread = None
     youtube_dl_stdout_queue = None
@@ -209,12 +209,12 @@ class Model():
                 bookmark_file = content_file.read()
                 content_file.close()
                 #print ("Applying Regular Expression ..")
-                regex = re.compile('.*<DT><A\sHREF=".*www\.youtube\.com/watch\?.*v=([^&#"]*)\S*".*>(.*)</A>\n?')
+                regex = re.compile('.*<DT><A\sHREF=".*www\.youtube\.com/watch\?.*v=([a-zA-Z0-9]*)\S*".*>(.*)</A>\n?')
                 r = regex.search(bookmark_file)
                 videos = regex.findall(bookmark_file)
                 #if we could not extract bookmarks, simply scan for youtube videos
                 if(len(videos) == 0):
-                    regex = re.compile('v=([^&#\n]*)')
+                    regex = re.compile('v=([a-zA-Z0-9]*)')
                     videos = regex.findall(bookmark_file)
                     #fill with empty title
                     #print(videos)
@@ -242,7 +242,7 @@ class Model():
                     if(len(formated_title) > 255):
                             formated_title = formated_title[0:254]
                     if(formated_title == ""):
-                        formated_title = "Title Avaliable When Downloading [" + str(id) + "]"
+                        formated_title = "Title Available When Downloading [" + str(id) + "]"
                     formated_video = {"Url": "www.youtube.com/watch?v=" + video[0],
                                       "Title": formated_title,
                                       "Info": {
@@ -379,7 +379,7 @@ class Model():
             input_command.extend(["--verbose","--newline", "--continue", "--ignore-errors", "--no-overwrites", "--no-check-certificate", "-o"])
         
             #set output title
-            if((self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE) or (current_video_info["Title"].find("Title Avaliable When Downloading") >= 0)):
+            if((self.getOutputTitleFormat() == titleFormat.USE_YOUTUBE_TITLE) or (current_video_info["Title"].find("Title Available When Downloading") >= 0)):
                 input_command.extend([self.getOutputPath() + "\\" + "%(title)s.%(ext)s"])
             elif(self.getOutputTitleFormat() == titleFormat.USE_BOOKMARK_TITLE):
                 input_command.extend([self.getOutputPath() + "\\" + current_video_info["Title"] + ".%(ext)s"])
