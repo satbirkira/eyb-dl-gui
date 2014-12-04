@@ -29,7 +29,7 @@ Skip certain videos and requeue them:
 
 ![Context Menu](/screenshots/context_menu.png?raw=true "Context Menu")
 
-Uses layout manager correctly for better interaction:
+Uses layout manager correctly for intuitive interaction:
 
 ![UI Principles](/screenshots/ui_principles.png?raw=true "UI Principles")
 
@@ -40,7 +40,7 @@ Logs errors to file when they occur
 License
 -------
 
-Copyright 2014 Satbir Saini — satbirkira@gmail.com
+Copyright 2014 Satbir Saini â€” satbirkira@gmail.com
 
 eyb-dl-gui is released into the public domain by the copyright holders.
 
